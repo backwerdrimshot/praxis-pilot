@@ -847,6 +847,7 @@ function renderReceipt(result,sc,r,newCard){
         <b>What it did not measure:</b> which physical hand you used, grip, stroke quality, sound, or timing — those stay with your teacher (or a future timing mode).
         This is a <b>controller-input</b> result, not an instrument-performance grade.</div>
       <div class="entryrow">
+        ${LAUNCH.returnTo?`<a class="small" href="${LAUNCH.returnTo}" style="text-decoration:none;border:1px solid var(--cobalt);color:#cfe0ff;border-radius:8px;padding:5px 10px;font-size:12.5px">← Back to Praxis</a>`:""}
         <button class="small" id="tryAgain">${practice?"Practice again":"Try again"}</button>
         ${practice?`<button class="small go" id="goChallenge">Try the challenge</button>`:""}
         <button class="small ghost" id="jsonToggle">View result JSON</button>

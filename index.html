@@ -26,8 +26,11 @@
   .app .bar{height:5px;width:52px;border-radius:6px;margin-bottom:12px}
   .app h2{margin:0 0 6px;font-size:18px}
   .app p{margin:0;color:var(--muted);font-size:13.5px;line-height:1.55}
+  .app.home{border-color:var(--cobalt)}
+  .app.home .bar{background:var(--cobalt)}
   .app.sticking .bar{background:var(--purple)}
   .app.quiz .bar{background:var(--green)}
+  .divider{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.6px;margin:22px 0 4px}
   .note{margin-top:28px;background:var(--panel);border:1px dashed var(--line);border-radius:12px;
     padding:14px 16px;font-size:12.5px;color:var(--muted);line-height:1.6}
   .note b{color:var(--ink)}
@@ -37,9 +40,15 @@
 <body>
 <div class="wrap">
   <h1>Praxis pilot<span class="dot">.</span></h1>
-  <p class="sub">Two small practice activities from the Backwerd Rhythm Shop family. No accounts, no sign-in —
-    everything stays on this device. Your teacher will tell you which one to open.</p>
+  <p class="sub">A percussion practice pilot from the Backwerd Rhythm Shop family. No accounts, no sign-in —
+    everything stays on this device. Start at the home page; it shows each skill and tells you what to do next.</p>
   <div class="apps">
+    <a class="app home" href="pilot/">
+      <div class="bar"></div>
+      <h2>Praxis pilot — home ★</h2>
+      <p>Your three skills, the evidence you've built in each, and the next step. Start here.</p>
+    </a>
+    <div class="divider">or open an activity directly</div>
     <a class="app quiz" href="count-it-contract/">
       <div class="bar"></div>
       <h2>Count It — knowledge quiz</h2>
