@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Praxis pilot — Backwerd Rhythm Shop</title>
+<style>
+  :root{
+    --bg:#0F1117; --panel:#171A22; --panel2:#1E222C; --line:#2A2F3B;
+    --ink:#E8EBF2; --muted:#9AA3B2;
+    --cobalt:#5B8CFF; --green:#34D3A6; --purple:#A78BFA;
+    --shadow:0 10px 30px rgba(0,0,0,.45);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+  .wrap{max-width:720px;margin:0 auto;padding:48px 18px 60px;}
+  h1{font-size:26px;margin:0 0 6px}
+  h1 .dot{color:var(--cobalt)}
+  .sub{color:var(--muted);font-size:14px;line-height:1.6;margin:0 0 28px}
+  .apps{display:grid;gap:16px}
+  a.app{display:block;text-decoration:none;color:var(--ink);
+    background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);
+    border-radius:16px;padding:20px;box-shadow:var(--shadow);transition:.15s}
+  a.app:hover{border-color:#3a4150;transform:translateY(-1px)}
+  .app .bar{height:5px;width:52px;border-radius:6px;margin-bottom:12px}
+  .app h2{margin:0 0 6px;font-size:18px}
+  .app p{margin:0;color:var(--muted);font-size:13.5px;line-height:1.55}
+  .app.sticking .bar{background:var(--purple)}
+  .app.quiz .bar{background:var(--green)}
+  .note{margin-top:28px;background:var(--panel);border:1px dashed var(--line);border-radius:12px;
+    padding:14px 16px;font-size:12.5px;color:var(--muted);line-height:1.6}
+  .note b{color:var(--ink)}
+  footer{margin-top:36px;color:var(--muted);font-size:11.5px;text-align:center;line-height:1.6}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Praxis pilot<span class="dot">.</span></h1>
+  <p class="sub">Two small practice activities from the Backwerd Rhythm Shop family. No accounts, no sign-in —
+    everything stays on this device. Your teacher will tell you which one to open.</p>
+  <div class="apps">
+    <a class="app quiz" href="count-it-contract/">
+      <div class="bar"></div>
+      <h2>Count It — knowledge quiz</h2>
+      <p>Four quick questions about a sticking pattern: its name, its spelling, how it's built.</p>
+    </a>
+    <a class="app sticking" href="copy-the-sticking/">
+      <div class="bar"></div>
+      <h2>Copy the Sticking</h2>
+      <p>Your keyboard becomes a two-trigger controller. Map two keys, test them, then enter the
+        sticking from memory.</p>
+    </a>
+  </div>
+  <div class="note"><b>For teachers:</b> these are pilot prototypes. Results stay in each device's browser and are
+    shown to the student on a result receipt — nothing is uploaded. The receipt labels exactly what was and
+    wasn't measured (answer correctness vs. controller input; never physical performance).</div>
+  <footer>
+    Part of the Backwerd Rhythm Shop app family.<br>
+    © 2026 Backwerd Rimshot, LLC. All rights reserved.
+  </footer>
+</div>
+</body>
+</html>

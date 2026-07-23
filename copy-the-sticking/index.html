@@ -1,0 +1,927 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Copy the Sticking — Stick Lab trigger MVP</title>
+<style>
+  :root{
+    --bg:#0F1117; --panel:#171A22; --panel2:#1E222C; --line:#2A2F3B;
+    --ink:#E8EBF2; --muted:#9AA3B2;
+    --cobalt:#5B8CFF; --orange:#FF9A5B; --green:#34D3A6; --purple:#A78BFA;
+    --pink:#FF7DB0; --yellow:#FFCF5B;
+    --shadow:0 10px 30px rgba(0,0,0,.45);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+  a{color:var(--cobalt)}
+  .wrap{max-width:1080px;margin:0 auto;padding:18px 18px 60px;}
+  header.top{display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+    padding:12px 4px 18px;border-bottom:1px solid var(--line);margin-bottom:20px;}
+  .brand{display:flex;align-items:baseline;gap:10px}
+  .brand .logo{font-weight:800;letter-spacing:.5px;font-size:20px}
+  .brand .logo .dot{color:var(--purple)}
+  .brand .deck{color:var(--muted);font-size:13px}
+  .stats{margin-left:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .pill{background:var(--panel);border:1px solid var(--line);border-radius:999px;
+    padding:6px 12px;font-size:13px;display:flex;align-items:center;gap:7px;white-space:nowrap}
+  .pill b{font-weight:700}
+  .pill.ok{border-color:#2f5a4c;color:#7cf0cf}
+  .pill.warn{border-color:#5b4a3a;color:#ffc79d}
+
+  .grid{display:grid;grid-template-columns:1.2fr .8fr;gap:20px}
+  @media(max-width:860px){.grid{grid-template-columns:1fr}}
+
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:18px;box-shadow:var(--shadow)}
+  .panel h3{margin:0 0 4px;font-size:15px;display:flex;align-items:center;gap:8px}
+  .panel .sub{color:var(--muted);font-size:12.5px;margin:0 0 14px;line-height:1.5}
+
+  button{font:inherit;cursor:pointer;border-radius:10px;border:1px solid var(--line);
+    background:var(--panel);color:var(--ink);padding:10px 14px;transition:.15s}
+  button:hover{border-color:#3a4150;background:var(--panel2)}
+  button:active{transform:translateY(1px)}
+  button.primary{background:var(--purple);border-color:var(--purple);color:#150f26;font-weight:700}
+  button.go{background:var(--green);border-color:var(--green);color:#062018;font-weight:700}
+  button.ghost{background:transparent}
+  button.small{padding:5px 10px;font-size:12.5px;border-radius:8px}
+  button:disabled{opacity:.4;cursor:not-allowed}
+
+  /* ---- Card / game zone ---- */
+  .card{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);
+    border-radius:18px;box-shadow:var(--shadow);padding:22px;position:relative}
+  .accent{height:5px;border-radius:6px;width:52px;background:var(--purple);margin-bottom:14px}
+  .cardhead{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .cardhead h2{margin:0;font-size:21px}
+  .lvl{background:#0b0d12;border:1px solid var(--line);border-radius:6px;color:var(--muted);
+    padding:3px 8px;font-size:11px}
+  .skillid{margin-left:auto;font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace;
+    font-size:11px;color:var(--muted)}
+  .carddesc{color:var(--muted);font-size:13.5px;margin:6px 0 0;line-height:1.5}
+  .deck-nav{display:flex;gap:8px;margin-top:14px;align-items:center;flex-wrap:wrap}
+  .deck-nav .mode{margin-left:auto;display:flex;gap:0;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+  .deck-nav .mode button{border:none;border-radius:0;padding:8px 14px;font-size:13px}
+  .deck-nav .mode button.sel{background:var(--purple);color:#150f26;font-weight:700}
+
+  .stage{margin-top:16px;background:#0b0d12;border:1px solid var(--line);border-radius:14px;
+    padding:18px;min-height:150px;display:flex;flex-direction:column;gap:12px}
+  .stage .statusline{font-size:13px;color:var(--muted);display:flex;align-items:center;gap:10px;min-height:22px}
+  .stage .statusline b{color:var(--ink)}
+  .stage .statusline .count{margin-left:auto;font-family:"SF Mono",ui-monospace,Menlo,monospace}
+  .strokes{display:flex;gap:7px;flex-wrap:wrap}
+  .stroke{width:44px;height:52px;border-radius:10px;border:2px solid var(--line);background:var(--panel);
+    display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:800;position:relative}
+  .stroke.R{color:var(--orange)} .stroke.L{color:var(--purple)}
+  .stroke.cursor{border-color:var(--cobalt);box-shadow:0 0 0 3px rgba(91,140,255,.18)}
+  .stroke.done{border-color:#2f5a4c;background:#0f1a17}
+  .stroke.err{border-color:#e0554f;background:#1f1113;animation:shake .18s}
+  .stroke.hidden-g{color:transparent}
+  .stroke.hidden-g::after{content:"·";color:var(--muted);position:absolute;font-size:26px;font-weight:400}
+  .stroke.ok{border-color:#2f5a4c} .stroke.bad{border-color:#e0554f;background:#1f1113}
+  .stroke.ghost{opacity:.45;border-style:dashed}
+  .stroke small{position:absolute;bottom:-18px;font-size:10px;color:var(--muted);font-weight:500}
+  .strokegroup{display:flex;gap:7px;margin-right:10px}
+  @keyframes shake{0%{transform:translateX(0)}30%{transform:translateX(-3px)}60%{transform:translateX(3px)}100%{transform:translateX(0)}}
+  .bigmsg{font-size:17px;font-weight:700;min-height:24px}
+  .bigmsg.ok{color:var(--green)} .bigmsg.warn{color:var(--orange)}
+  .entryrow{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+
+  /* pads */
+  .pads{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px}
+  .pad{height:130px;border-radius:14px;border:2px solid var(--line);background:#0b0d12;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
+    font-size:34px;font-weight:800;user-select:none;-webkit-user-select:none;touch-action:manipulation;
+    cursor:pointer;transition:transform .05s, box-shadow .08s, border-color .08s}
+  .pad small{font-size:11.5px;color:var(--muted);font-weight:500}
+  .pad.L{color:var(--purple)} .pad.R{color:var(--orange)}
+  .pad.hit{transform:scale(.97);border-color:currentColor;box-shadow:0 0 22px rgba(167,139,250,.3)}
+  .pad.R.hit{box-shadow:0 0 22px rgba(255,154,91,.3)}
+
+  /* ---- Receipt ---- */
+  .receipt{margin-top:16px;border:1px solid var(--line);border-radius:14px;overflow:hidden}
+  .receipt .rhead{background:var(--panel2);padding:12px 16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;border-bottom:1px solid var(--line)}
+  .receipt .rhead b{font-size:14.5px}
+  .receipt .rhead .when{margin-left:auto;color:var(--muted);font-size:11.5px}
+  .receipt .rbody{padding:14px 16px;display:flex;flex-direction:column;gap:12px;background:#0d0f15}
+  .evrow{display:flex;gap:8px;flex-wrap:wrap}
+  .ev{border-radius:10px;padding:8px 12px;font-size:12.5px;border:1px solid var(--line);background:var(--panel)}
+  .ev .tier{display:inline-block;font-weight:800;border-radius:5px;padding:1px 7px;font-size:11px;margin-right:7px;color:#0b0d12}
+  .ev.a1 .tier{background:var(--green)} .ev.a2 .tier{background:var(--cobalt)}
+  .ev.meta .tier{background:var(--muted)}
+  .ev b.score{font-size:13px}
+  .rstats{display:flex;gap:8px;flex-wrap:wrap}
+  .rstat{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:7px 10px;font-size:12.5px}
+  .rstat span{color:var(--muted);font-size:10.5px;display:block;text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px}
+  .boundary{background:#12141c;border:1px dashed var(--line);border-radius:10px;padding:10px 12px;font-size:12.5px;color:var(--muted);line-height:1.55}
+  .boundary b{color:var(--ink)}
+  .validity{color:var(--orange);font-size:12px}
+  .cmprow{overflow-x:auto;padding-bottom:20px}
+  .jsonbox{background:#0b0d12;border:1px solid var(--line);border-radius:10px;padding:12px;
+    font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace;font-size:11px;line-height:1.5;
+    white-space:pre;overflow-x:auto;color:#b9c2d8;max-height:300px;overflow-y:auto}
+  .earnbanner{background:linear-gradient(90deg,#1d1930,#171A22);border:1px solid var(--purple);
+    border-radius:10px;padding:10px 14px;font-size:13.5px}
+  .earnbanner b{color:var(--purple)}
+
+  /* ---- Input setup ---- */
+  .handrow{display:flex;flex-direction:column;gap:10px}
+  .hand{background:#0b0d12;border:1px solid var(--line);border-radius:12px;padding:12px}
+  .hand .ht{font-weight:800;font-size:14px;margin-bottom:8px;display:flex;align-items:center;gap:8px}
+  .hand.L .ht{color:var(--purple)} .hand.R .ht{color:var(--orange)}
+  .hand .ht .lit{width:10px;height:10px;border-radius:50%;background:#20242e;transition:.06s;margin-left:auto}
+  .hand.L .ht .lit.on{background:var(--purple);box-shadow:0 0 10px var(--purple)}
+  .hand.R .ht .lit.on{background:var(--orange);box-shadow:0 0 10px var(--orange)}
+  .slot{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--muted);padding:3px 0}
+  .slot .keycap{min-width:44px;text-align:center;background:var(--panel2);border:1px solid #3a4150;
+    border-bottom-width:3px;border-radius:7px;padding:5px 9px;font-family:"SF Mono",ui-monospace,Menlo,monospace;
+    font-size:13px;color:var(--ink);font-weight:700}
+  .slot .keycap.empty{color:var(--muted);font-weight:400;border-style:dashed}
+  .slot .lb{width:56px}
+  .slot .acts{margin-left:auto;display:flex;gap:6px}
+  .capturebar{margin-top:10px;background:#14203a;border:1px solid var(--cobalt);border-radius:10px;
+    padding:10px 12px;font-size:13px;color:#cfe0ff;display:none}
+  .capturebar.show{display:block}
+  .setuprow{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;align-items:center}
+  .setuprow .adv{margin-left:auto;color:var(--muted);font-size:12px;display:flex;align-items:center;gap:6px}
+  .setuprow input[type=number]{width:58px;background:#0b0d12;border:1px solid var(--line);color:var(--ink);
+    border-radius:7px;padding:5px 7px;font:inherit;font-size:12.5px}
+
+  /* ---- Reliability test ---- */
+  .reltarget{display:flex;gap:6px;flex-wrap:wrap;margin:4px 0 10px}
+  .relchip{width:34px;height:38px;border-radius:8px;border:1.5px solid var(--line);background:#0b0d12;
+    display:flex;align-items:center;justify-content:center;font-weight:800;font-size:16px;color:var(--muted)}
+  .relchip.L{color:var(--purple)} .relchip.R{color:var(--orange)}
+  .relchip.dim{opacity:.35}
+  .relchip.hitok{border-color:#2f5a4c;background:#0f1a17}
+  .relchip.hitwrong{border-color:#e0554f;background:#1f1113}
+  .relchip.next{border-color:var(--cobalt);box-shadow:0 0 0 2px rgba(91,140,255,.2)}
+  .relreport{background:#0b0d12;border:1px solid var(--line);border-radius:10px;padding:12px;font-size:12.5px;
+    display:none;flex-direction:column;gap:6px}
+  .relreport.show{display:flex}
+  .relreport .row{display:flex;justify-content:space-between;gap:10px}
+  .relreport .row span{color:var(--muted)}
+  .relreport .verdict{font-weight:800;font-size:13.5px;padding-top:6px;border-top:1px solid var(--line);margin-top:4px}
+  .relreport .verdict.pass{color:var(--green)} .relreport .verdict.checkit{color:var(--orange)}
+
+  /* collection */
+  .cardsgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+  .ccard{background:#0b0d12;border:1px solid var(--line);border-radius:12px;padding:10px;opacity:.4}
+  .ccard.earned{opacity:1;border-color:#4c4370;background:linear-gradient(180deg,#1a1626,#12101c)}
+  .ccard .nm{font-size:12.5px;font-weight:700}
+  .ccard .pat{font-family:"SF Mono",ui-monospace,Menlo,monospace;font-size:11px;color:var(--muted);
+    letter-spacing:1px;margin-top:4px}
+  .ccard .st{font-size:10.5px;margin-top:6px;color:var(--muted)}
+  .ccard.earned .st{color:var(--purple)}
+
+  footer{margin-top:26px;color:var(--muted);font-size:11.5px;text-align:center;line-height:1.6}
+  .foot-reset{background:none;border:none;color:var(--cobalt);cursor:pointer;font-size:11.5px;padding:0;text-decoration:underline}
+
+  .toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(30px);
+    background:var(--green);color:#062018;font-weight:700;padding:12px 18px;border-radius:12px;
+    box-shadow:var(--shadow);opacity:0;transition:.3s;pointer-events:none;z-index:20;font-size:14px}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  .toast.warn{background:var(--orange);color:#241203}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <div class="logo">Copy the Sticking<span class="dot">.</span></div>
+      <div class="deck">Stick Lab · two-trigger MVP</div>
+    </div>
+    <div class="stats">
+      <div class="pill" id="srcPill">Input: <b id="srcLbl">—</b></div>
+      <div class="pill warn" id="relPill">Inputs not tested</div>
+    </div>
+  </header>
+
+  <div class="grid">
+    <!-- ============ LEFT: game ============ -->
+    <section>
+      <div class="card">
+        <div class="accent"></div>
+        <div class="cardhead">
+          <h2 id="cardTitle">—</h2>
+          <span class="lvl" id="cardLvl">Level 1</span>
+          <span class="skillid" id="cardSkill">—</span>
+        </div>
+        <p class="carddesc" id="cardDesc"></p>
+        <div class="deck-nav">
+          <button class="small" id="prevCard">◀ Prev</button>
+          <button class="small" id="nextCard">Next ▶</button>
+          <div class="mode" role="tablist">
+            <button id="modePractice" class="sel">Practice</button>
+            <button id="modeChallenge">Challenge</button>
+          </div>
+        </div>
+
+        <div class="stage">
+          <div class="statusline">
+            <b id="stageState">Ready</b><span id="stageHint"></span>
+            <span class="count" id="stageCount"></span>
+          </div>
+          <div class="strokes" id="strokeRow" style="padding-bottom:20px"></div>
+          <div class="bigmsg" id="bigMsg"></div>
+          <div class="entryrow" id="entryRow">
+            <button class="primary" id="startBtn">Start round</button>
+            <button id="submitBtn" style="display:none">Submit ✓ <small style="color:var(--muted)">(Space)</small></button>
+            <button class="ghost" id="clearBtn" style="display:none">Clear</button>
+            <button class="ghost" id="cancelBtn" style="display:none">Cancel <small style="color:var(--muted)">(Esc)</small></button>
+          </div>
+        </div>
+
+        <div class="pads">
+          <div class="pad L" id="padL"><span>L</span><small id="padLkeys">key F</small></div>
+          <div class="pad R" id="padR"><span>R</span><small id="padRkeys">key J</small></div>
+        </div>
+      </div>
+
+      <div id="receiptZone"></div>
+    </section>
+
+    <!-- ============ RIGHT: input setup, reliability, collection ============ -->
+    <section style="display:flex;flex-direction:column;gap:20px">
+      <div class="panel">
+        <h3>🎛️ Triggers</h3>
+        <p class="sub">Your keyboard is a two-trigger controller. Map any two comfortable keys — or use the on-screen pads. Keys are stored by physical position, so layouts don't break them.</p>
+        <div class="handrow">
+          <div class="hand L">
+            <div class="ht">Left hand <span class="lit" id="litL"></span></div>
+            <div class="slot"><span class="lb">Primary</span><span class="keycap" id="kL0">F</span>
+              <span class="acts"><button class="small" data-cap="L0">Change</button></span></div>
+            <div class="slot"><span class="lb">Backup</span><span class="keycap empty" id="kL1">—</span>
+              <span class="acts"><button class="small" data-cap="L1">Set</button><button class="small ghost" data-clr="L1">Clear</button></span></div>
+          </div>
+          <div class="hand R">
+            <div class="ht">Right hand <span class="lit" id="litR"></span></div>
+            <div class="slot"><span class="lb">Primary</span><span class="keycap" id="kR0">J</span>
+              <span class="acts"><button class="small" data-cap="R0">Change</button></span></div>
+            <div class="slot"><span class="lb">Backup</span><span class="keycap empty" id="kR1">—</span>
+              <span class="acts"><button class="small" data-cap="R1">Set</button><button class="small ghost" data-clr="R1">Clear</button></span></div>
+          </div>
+        </div>
+        <div class="capturebar" id="captureBar"></div>
+        <div class="setuprow">
+          <button class="small" id="resetBinds">Reset to defaults</button>
+          <label class="adv" title="Ignore a second press of the same control within this window (for chattering external buttons)">Debounce
+            <input type="number" id="refractory" min="0" max="200" step="5"> ms</label>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3>🩺 Reliability test</h3>
+        <p class="sub">Before a scored round, check both triggers: press the highlighted hand, alternating <b>L R L R…</b> — five each. Catches dead keys, bounce, and ghosting <em>before</em> it costs you a result.</p>
+        <div class="reltarget" id="relTarget"></div>
+        <div class="entryrow" style="margin-bottom:10px">
+          <button class="primary" id="relStart">Run test</button>
+          <button class="ghost" id="relFinish" style="display:none">Finish early</button>
+        </div>
+        <div class="relreport" id="relReport"></div>
+      </div>
+
+      <div class="panel">
+        <h3>🗂️ Earned cards</h3>
+        <p class="sub">A card is earned by a clean Challenge round — from memory, no errors. Cards are earned skills; there is nothing to buy.</p>
+        <div class="cardsgrid" id="collGrid"></div>
+      </div>
+    </section>
+  </div>
+
+  <footer>
+    Prototype · part of the Backwerd Rhythm Shop app family · the Stick Lab controller pilot for <b>Praxis</b> (Notion docs 13 / 14d).<br>
+    Everything stays in this browser — no account, no student data leaves the page. <button class="foot-reset" id="resetAll">Reset all local data</button><br>
+    © 2026 Backwerd Rimshot, LLC. All rights reserved.
+  </footer>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* =====================================================================
+   Copy the Sticking — Stick Lab two-trigger MVP
+   Doc 13 (Controller Input & Trigger Architecture) Phase 0 +
+   Doc 14d (First Cross-App Pilot) required prototype features.
+   Keyboard = two-trigger controller, never a microphone substitute.
+   ===================================================================== */
+const $=s=>document.querySelector(s);
+const APP_ID="backwerd.stick-lab.copy-the-sticking";
+const ACTIVITY={activityId:"copy-the-sticking", activityVersion:"0.1.0",
+  scoringRuleVersion:"seq-0.1", resultContract:"praxis.result.v0_1"};
+
+/* ---------------- Deck (pilot scope: a few sticking targets, not the PAS 40) ---------------- */
+const DECK=[
+  {skillId:"rudiment.single-stroke-roll.core", title:"Single stroke roll", level:1,
+   pattern:"RLRLRLRL", group:4,
+   desc:"Alternating hands, one stroke each. The baseline: every other pattern is a variation of this."},
+  {skillId:"rudiment.double-stroke-roll.core", title:"Double stroke roll", level:1,
+   pattern:"RRLLRRLL", group:4,
+   desc:"Two strokes per hand. Watch the hand change on beats 2 and 4."},
+  {skillId:"rudiment.single-paradiddle.core", title:"Single paradiddle", level:2,
+   pattern:"RLRRLRLL", group:4,
+   desc:"Single, single, double. The lead hand flips every four notes — that flip is the whole point."},
+  {skillId:"rudiment.double-paradiddle.core", title:"Double paradiddle", level:3,
+   pattern:"RLRLRRLRLRLL", group:6,
+   desc:"Two singles, then a paradiddle. Six notes per side; the lead hand alternates."},
+  {skillId:"rudiment.paradiddle-diddle.core", title:"Paradiddle-diddle", level:3,
+   pattern:"RLRRLLRLRRLL", group:6,
+   desc:"Paradiddle plus one more diddle. Six notes — and the lead hand does NOT alternate."},
+];
+
+/* ---------------- Persistent state ---------------- */
+const LS_KEY="praxis.cts.v1";
+function defaultState(){return{
+  bindings:{L:[{code:"KeyF",label:"F"},null], R:[{code:"KeyJ",label:"J"},null]},
+  refractoryMs:25,
+  relTest:null,             // {at, sig, summary:{...}, passed}
+  earned:{},                // skillId -> iso date
+  attempts:[],              // stored challenge receipts (capped)
+  cardIdx:0
+};}
+let S=defaultState();
+try{const raw=localStorage.getItem(LS_KEY); if(raw) S=Object.assign(defaultState(),JSON.parse(raw));}catch(e){}
+function save(){try{localStorage.setItem(LS_KEY,JSON.stringify(S));}catch(e){}}
+
+/* ---------------- Audio (Web Audio, lazy) ---------------- */
+let AC=null;
+function ac(){ if(!AC){ try{AC=new (window.AudioContext||window.webkitAudioContext)();}catch(e){} }
+  if(AC&&AC.state==="suspended") AC.resume(); return AC; }
+function blip(freq,dur=0.06,type="triangle",gain=0.18){
+  const c=ac(); if(!c) return;
+  const o=c.createOscillator(), g=c.createGain();
+  o.type=type; o.frequency.value=freq;
+  g.gain.setValueAtTime(gain,c.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.0001,c.currentTime+dur);
+  o.connect(g).connect(c.destination); o.start(); o.stop(c.currentTime+dur+0.02);
+}
+const sndL=()=>blip(392,0.06);           // G4
+const sndR=()=>blip(523.25,0.06);        // C5
+const sndErr=()=>blip(140,0.12,"square",0.12);
+const sndWin=()=>{blip(523.25,.09);setTimeout(()=>blip(659.25,.09),90);setTimeout(()=>blip(783.99,.14),180);};
+
+/* =====================================================================
+   Input manager (doc 13): map ACTIONS not devices.
+   Emits TriggerEvent {source, action, controlId, timestampMs, pressed}.
+   Keyboard adapter binds by KeyboardEvent.code; touch adapter = pads.
+   ===================================================================== */
+const RESERVED=new Set(["Tab","Escape","Enter","NumpadEnter","Space","Backspace","CapsLock","ContextMenu",
+  "MetaLeft","MetaRight","ControlLeft","ControlRight","AltLeft","AltRight","OSLeft","OSRight",
+  "F1","F2","F3","F4","F5","F6","F7","F8","F9","F10","F11","F12","PrintScreen","Delete"]);
+const pressedCodes=new Set();
+const lastDownAt={};           // controlId -> perf ts (refractory / bounce detection)
+let bounceCount=0;             // bounces observed since last reset (reliability test reads this)
+let listeners=[];              // trigger event consumers
+function onTrigger(fn){listeners.push(fn);}
+function emitTrigger(ev){ flashPad(ev.action); listeners.forEach(fn=>fn(ev)); }
+
+function bindingsSig(){ return ["L","R"].map(h=>S.bindings[h].map(b=>b?b.code:"·").join("+")).join("/"); }
+/* Bind by physical KeyboardEvent.code; some synthetic keyboards/IMEs send an
+   empty code, so fall back to the key label only in that case. */
+function effCode(e){ return e.code||("key:"+(e.key||"").toLowerCase()); }
+function eventToAction(e){
+  const code=effCode(e), lbl=keyLabel(e).toLowerCase();
+  for(const h of ["L","R"]) for(const b of S.bindings[h])
+    if(b&&(b.code===code||(!e.code&&b.label.toLowerCase()===lbl)))
+      return h==="L"?"LEFT_HAND":"RIGHT_HAND";
+  return null;
+}
+function keyLabel(e){
+  if(e.key===" ")return "Space";
+  return e.key.length===1?e.key.toUpperCase():e.key;
+}
+function isTextTarget(t){ return t&&(t.tagName==="INPUT"||t.tagName==="TEXTAREA"||t.isContentEditable); }
+
+/* --- key capture for remapping --- */
+let captureSlot=null; // "L0","L1","R0","R1"
+function beginCapture(slot){
+  captureSlot=slot;
+  const hand=slot[0]==="L"?"Left":"Right", which=slot[1]==="0"?"primary":"backup";
+  $("#captureBar").classList.add("show");
+  $("#captureBar").textContent=`Press a key for ${hand} hand (${which})… Esc to cancel.`;
+}
+function endCapture(msg,warn){
+  captureSlot=null; $("#captureBar").classList.remove("show");
+  if(msg) toast(msg,warn);
+}
+
+let activeSurface=null; // null | "round" | "reltest"  — capture mapped keys only while active (doc 13)
+document.addEventListener("keydown",e=>{
+  // 1. remap capture has first claim on the next key
+  if(captureSlot){
+    e.preventDefault();
+    if(e.code==="Escape"||e.key==="Escape"){ endCapture("Remap cancelled",true); return; }
+    if(RESERVED.has(e.code)||RESERVED.has(keyLabel(e))){ endCapture(`${keyLabel(e)} is a browser/system key — pick another`,true); return; }
+    const taken=["L","R"].some(h=>S.bindings[h].some(b=>b&&b.code===effCode(e)));
+    if(taken){ endCapture(`${keyLabel(e)} is already bound — pick another`,true); return; }
+    const h=captureSlot[0], i=+captureSlot[1];
+    S.bindings[h][i]={code:effCode(e),label:keyLabel(e)};
+    invalidateRelTestIfChanged(); save(); renderBindings();
+    endCapture(`${h==="L"?"Left":"Right"} ${i===0?"primary":"backup"} → ${keyLabel(e)}`);
+    return;
+  }
+  if(isTextTarget(e.target)) return;              // never swallow typing in a text field
+  // 2. UI action keys during an active round
+  if(activeSurface==="round"&&round&&round.phase==="entry"){
+    if(e.code==="Space"||e.key===" "){ e.preventDefault(); if(!e.repeat) submitEntry(); return; }
+  }
+  if((e.code==="Escape"||e.key==="Escape")&&activeSurface==="round"){ cancelRound(); return; }
+  // 3. mapped trigger keys
+  const action=eventToAction(e);
+  if(!action) return;
+  if(activeSurface) e.preventDefault();           // prevent browser behavior only for active mapped keys
+  if(e.repeat) return;                            // held key must not generate answers
+  const code=effCode(e), now=performance.now();
+  if(now-(lastDownAt[code]??-1e9)<S.refractoryMs){ bounceCount++; return; }
+  lastDownAt[code]=now;
+  if(pressedCodes.has(code)) return;
+  pressedCodes.add(code);
+  emitTrigger({source:"keyboard",action,controlId:code,timestampMs:now,value:1,pressed:true});
+});
+document.addEventListener("keyup",e=>{ pressedCodes.delete(effCode(e)); });
+let focusLossFlag=false;
+function clearStuck(){ pressedCodes.clear();
+  if(activeSurface){ focusLossFlag=true; toast("Focus lost — inputs reset, keep going",true); } }
+window.addEventListener("blur",clearStuck);
+document.addEventListener("visibilitychange",()=>{ if(document.hidden) clearStuck(); });
+
+/* --- touch/pointer adapter: on-screen pads --- */
+function padDown(hand,el){
+  const now=performance.now(), id="pad"+hand;
+  ac(); // unlock audio on first gesture
+  if(now-(lastDownAt[id]??-1e9)<S.refractoryMs){ bounceCount++; return; }
+  lastDownAt[id]=now;
+  emitTrigger({source:"touch",action:hand==="L"?"LEFT_HAND":"RIGHT_HAND",controlId:id,timestampMs:now,value:1,pressed:true});
+}
+["L","R"].forEach(h=>{
+  const el=$("#pad"+h);
+  el.addEventListener("pointerdown",e=>{e.preventDefault();padDown(h,el);});
+});
+function flashPad(action){
+  const h=action==="LEFT_HAND"?"L":action==="RIGHT_HAND"?"R":null; if(!h) return;
+  const el=$("#pad"+h), lit=$("#lit"+h);
+  el.classList.add("hit"); lit.classList.add("on");
+  (h==="L"?sndL:sndR)();
+  setTimeout(()=>{el.classList.remove("hit");lit.classList.remove("on");},110);
+}
+
+/* ---------------- Bindings UI ---------------- */
+function renderBindings(){
+  [["L0","L",0],["L1","L",1],["R0","R",0],["R1","R",1]].forEach(([id,h,i])=>{
+    const b=S.bindings[h][i], el=$("#k"+id);
+    el.textContent=b?b.label:"—";
+    el.classList.toggle("empty",!b);
+  });
+  const lk=S.bindings.L.filter(Boolean).map(b=>b.label).join(" / ");
+  const rk=S.bindings.R.filter(Boolean).map(b=>b.label).join(" / ");
+  $("#padLkeys").textContent="key "+lk; $("#padRkeys").textContent="key "+rk;
+  $("#srcLbl").textContent=`keys ${lk} · ${rk} + pads`;
+  $("#refractory").value=S.refractoryMs;
+  renderRelPill();
+}
+document.querySelectorAll("[data-cap]").forEach(b=>b.addEventListener("click",()=>beginCapture(b.dataset.cap)));
+document.querySelectorAll("[data-clr]").forEach(b=>b.addEventListener("click",()=>{
+  const h=b.dataset.clr[0], i=+b.dataset.clr[1];
+  S.bindings[h][i]=null; invalidateRelTestIfChanged(); save(); renderBindings();
+}));
+$("#resetBinds").addEventListener("click",()=>{
+  S.bindings=defaultState().bindings; S.refractoryMs=25;
+  invalidateRelTestIfChanged(); save(); renderBindings(); toast("Bindings reset to F / J");
+});
+$("#refractory").addEventListener("change",e=>{
+  S.refractoryMs=Math.max(0,Math.min(200,+e.target.value||0)); save(); renderBindings();
+});
+function invalidateRelTestIfChanged(){
+  if(S.relTest&&S.relTest.sig!==bindingsSig()){ S.relTest=null; }
+}
+function relValid(){ return S.relTest&&S.relTest.passed&&S.relTest.sig===bindingsSig(); }
+function renderRelPill(){
+  const p=$("#relPill");
+  if(relValid()){ p.className="pill ok"; p.textContent="✓ Inputs tested"; }
+  else if(S.relTest&&!S.relTest.passed){ p.className="pill warn"; p.textContent="Input test flagged issues"; }
+  else { p.className="pill warn"; p.textContent="Inputs not tested"; }
+}
+
+/* =====================================================================
+   Reliability test (doc 13): 5 alternating presses per binding.
+   Reports detected / missed / bounced / simultaneous / interval outliers.
+   Offers "Remap now" instead of failing the student.
+   ===================================================================== */
+const REL_SEQ="LRLRLRLRLR".split("");   // 5 each, alternating
+let rel=null;
+function renderRelTarget(){
+  $("#relTarget").innerHTML=REL_SEQ.map((h,i)=>{
+    let cls="relchip "+h;
+    if(!rel) cls+=" dim";
+    else{
+      if(i<rel.hits.length) cls+=rel.hits[i].ok?" hitok":" hitwrong";
+      else if(i===rel.hits.length) cls+=" next";
+    }
+    return `<div class="${cls}">${h}</div>`;
+  }).join("");
+}
+$("#relStart").addEventListener("click",()=>{
+  ac();
+  rel={hits:[],times:[],simultaneous:0,startBounce:bounceCount,lastHand:{}};
+  activeSurface="reltest"; focusLossFlag=false;
+  $("#relReport").classList.remove("show");
+  $("#relStart").textContent="Testing… press "+REL_SEQ.length+" alternating";
+  $("#relStart").disabled=true; $("#relFinish").style.display="";
+  renderRelTarget();
+});
+$("#relFinish").addEventListener("click",()=>finishRel());
+function relInput(ev){
+  if(!rel) return;
+  const hand=ev.action==="LEFT_HAND"?"L":"R";
+  const want=REL_SEQ[rel.hits.length];
+  const t=ev.timestampMs;
+  // simultaneous = the other hand landed within 40 ms
+  const other=hand==="L"?"R":"L";
+  if(rel.lastHand[other]!=null&&t-rel.lastHand[other]<40) rel.simultaneous++;
+  rel.lastHand[hand]=t;
+  rel.times.push(t);
+  rel.hits.push({hand,ok:hand===want,src:ev.source});
+  renderRelTarget();
+  if(rel.hits.length>=REL_SEQ.length) finishRel();
+}
+function finishRel(){
+  if(!rel) return;
+  const detL=rel.hits.filter(h=>h.hand==="L").length;
+  const detR=rel.hits.filter(h=>h.hand==="R").length;
+  const missL=Math.max(0,5-detL), missR=Math.max(0,5-detR);
+  const wrongOrder=rel.hits.filter(h=>!h.ok).length;
+  const bounced=bounceCount-rel.startBounce;
+  const iv=[]; for(let i=1;i<rel.times.length;i++) iv.push(rel.times[i]-rel.times[i-1]);
+  const med=iv.length?[...iv].sort((a,b)=>a-b)[Math.floor(iv.length/2)]:0;
+  const avg=iv.length?Math.round(iv.reduce((a,b)=>a+b,0)/iv.length):0;
+  const outliers=iv.filter(x=>med&&x>med*2.5).length;
+  const touchUsed=rel.hits.some(h=>h.src==="touch");
+  const passed=missL===0&&missR===0&&bounced===0&&wrongOrder<=1;
+  const summary={detected:{L:detL,R:detR},missed:{L:missL,R:missR},wrongOrder,bounced,
+    simultaneous:rel.simultaneous,avgIntervalMs:avg,intervalOutliers:outliers,
+    focusLost:focusLossFlag,source:touchUsed?"touch/mixed":"keyboard"};
+  S.relTest={at:new Date().toISOString(),sig:bindingsSig(),passed,summary};
+  save(); renderRelPill();
+  const rep=$("#relReport");
+  rep.innerHTML=`
+    <div class="row"><span>Detected presses</span><b>L ${detL}/5 · R ${detR}/5</b></div>
+    <div class="row"><span>Missed (not registered)</span><b>${missL+missR}</b></div>
+    <div class="row"><span>Duplicate / bounced</span><b>${bounced}</b></div>
+    <div class="row"><span>Out-of-order presses</span><b>${wrongOrder}</b></div>
+    <div class="row"><span>Near-simultaneous L+R</span><b>${rel.simultaneous}</b></div>
+    <div class="row"><span>Average interval</span><b>${avg} ms${outliers?` · ${outliers} outlier${outliers>1?"s":""}`:""}</b></div>
+    <div class="verdict ${passed?"pass":"checkit"}">${passed
+      ?"✓ Both triggers look reliable — Challenge mode unlocked"
+      :"⚠ Something's off — this is a device issue, not a you issue"}</div>
+    ${passed?"":`<div class="entryrow" style="margin-top:6px">
+      <button class="small" id="relRemap">Remap now</button>
+      <button class="small ghost" id="relPads">Use on-screen pads</button>
+      <button class="small ghost" id="relRetry">Test again</button></div>`}`;
+  rep.classList.add("show");
+  rel=null; activeSurface=null;
+  $("#relStart").textContent="Run test"; $("#relStart").disabled=false; $("#relFinish").style.display="none";
+  renderRelTarget();
+  if(!passed){
+    $("#relRemap")?.addEventListener("click",()=>beginCapture("L0"));
+    $("#relPads")?.addEventListener("click",()=>{toast("Pads always work — tap L / R below the card"); });
+    $("#relRetry")?.addEventListener("click",()=>$("#relStart").click());
+  } else toast("Reliability test passed");
+}
+
+/* =====================================================================
+   Copy the Sticking — round engine
+   Practice: pattern visible, advance on correct press (formative, not stored).
+   Challenge: preview → enter from memory → submit. Emits A1 + A2 evidence.
+   ===================================================================== */
+let mode="practice";
+let round=null;   // {phase:"preview"|"entry"|"done", entered:[{hand,source,t}], errors, clears, startedAt, previewLeft, sources:Set}
+function card(){ return DECK[S.cardIdx]; }
+function pat(){ return card().pattern.split(""); }
+
+function setMode(m){
+  if(round) cancelRound();
+  mode=m;
+  $("#modePractice").classList.toggle("sel",m==="practice");
+  $("#modeChallenge").classList.toggle("sel",m==="challenge");
+  renderStage();
+}
+$("#modePractice").addEventListener("click",()=>setMode("practice"));
+$("#modeChallenge").addEventListener("click",()=>setMode("challenge"));
+$("#prevCard").addEventListener("click",()=>{ if(round)cancelRound(); S.cardIdx=(S.cardIdx-1+DECK.length)%DECK.length; save(); renderCard(); });
+$("#nextCard").addEventListener("click",()=>{ if(round)cancelRound(); S.cardIdx=(S.cardIdx+1)%DECK.length; save(); renderCard(); });
+
+function renderCard(){
+  const c=card();
+  $("#cardTitle").textContent=c.title;
+  $("#cardLvl").textContent="Level "+c.level;
+  $("#cardSkill").textContent=c.skillId;
+  $("#cardDesc").textContent=c.desc;
+  $("#receiptZone").innerHTML="";
+  renderStage(); renderCollection();
+}
+
+function strokeChips(opts){
+  // opts: {show:'all'|'none', cursor, doneUpto, marks:[], entered:[], ghost:[]}
+  const p=pat(), g=card().group, out=[];
+  let html="";
+  p.forEach((h,i)=>{
+    let cls="stroke "+h, txt=h;
+    if(opts.show==="none"){ cls+=" hidden-g"; }
+    if(opts.cursor===i) cls+=" cursor";
+    if(opts.doneUpto!=null&&i<opts.doneUpto) cls+=" done";
+    if(opts.marks&&opts.marks[i]) cls+=" "+opts.marks[i];
+    if(opts.entered){
+      const e=opts.entered[i];
+      txt=e?e.hand:"·"; cls="stroke "+(e?e.hand:"")+(opts.marks&&opts.marks[i]?" "+opts.marks[i]:"");
+      if(!e) cls+=" ghost";
+    }
+    const beat=(i%g===0)?`<small>${Math.floor(i/g)+1}</small>`:"";
+    html+=`<div class="${cls}" data-i="${i}">${txt}${beat}</div>`;
+    if((i+1)%g===0&&i<p.length-1) html+=`<div style="width:8px"></div>`;
+  });
+  return html;
+}
+
+function renderStage(){
+  const sr=$("#strokeRow"), st=$("#stageState"), hint=$("#stageHint"), cnt=$("#stageCount");
+  $("#bigMsg").textContent=""; $("#bigMsg").className="bigmsg";
+  $("#submitBtn").style.display="none"; $("#clearBtn").style.display="none"; $("#cancelBtn").style.display="none";
+  $("#startBtn").style.display="";
+  if(!round){
+    sr.innerHTML=strokeChips({show:mode==="practice"?"all":"all"});
+    st.textContent=mode==="practice"?"Practice":"Challenge";
+    hint.textContent=mode==="practice"
+      ?"— pattern stays visible; wrong presses don't advance"
+      :"— memorize, then enter from memory. Clean round earns the card";
+    cnt.textContent=pat().length+" strokes";
+    $("#startBtn").textContent=mode==="practice"?"Start practice":"Start challenge";
+    return;
+  }
+  $("#startBtn").style.display="none";
+  $("#cancelBtn").style.display="";
+  if(round.phase==="preview"){
+    sr.innerHTML=strokeChips({show:"all"});
+    st.textContent="Memorize";
+    hint.textContent="— pattern hides in "+round.previewLeft+"s";
+    cnt.textContent="";
+  }else if(round.phase==="entry"){
+    if(mode==="practice"){
+      sr.innerHTML=strokeChips({show:"all",cursor:round.entered.length,doneUpto:round.entered.length});
+      st.textContent="Your turn"; hint.textContent="— press the highlighted stroke";
+    }else{
+      sr.innerHTML=strokeChips({entered:round.entered});
+      st.textContent="From memory"; hint.textContent="— enter the pattern, then Submit";
+      $("#submitBtn").style.display=""; $("#clearBtn").style.display="";
+    }
+    cnt.textContent=round.entered.length+" / "+pat().length;
+  }
+}
+
+$("#startBtn").addEventListener("click",startRound);
+function startRound(){
+  ac();
+  if(mode==="challenge"&&!relValid()){
+    toast("Run the reliability test first — Challenge results should be trustworthy",true);
+    $("#relStart").scrollIntoView({behavior:"smooth",block:"center"});
+    return;
+  }
+  focusLossFlag=false;
+  round={phase:mode==="challenge"?"preview":"entry",entered:[],errors:0,clears:0,
+    startedAt:new Date().toISOString(),previewLeft:5,sources:new Set()};
+  activeSurface="round";
+  $("#receiptZone").innerHTML="";
+  if(round.phase==="preview"){
+    renderStage();
+    round.previewTimer=setInterval(()=>{
+      if(!round||round.phase!=="preview") return;
+      round.previewLeft--;
+      if(round.previewLeft<=0){ clearInterval(round.previewTimer); round.phase="entry"; blip(660,.08); }
+      renderStage();
+    },1000);
+  } else renderStage();
+}
+function cancelRound(){
+  if(round&&round.previewTimer) clearInterval(round.previewTimer);
+  round=null; activeSurface=null; renderStage();
+}
+$("#cancelBtn").addEventListener("click",cancelRound);
+$("#clearBtn").addEventListener("click",()=>{
+  if(round&&round.phase==="entry"){ round.clears++; round.entered=[]; renderStage(); }
+});
+$("#submitBtn").addEventListener("click",submitEntry);
+
+function roundInput(ev){
+  if(!round||round.phase!=="entry") return;
+  const hand=ev.action==="LEFT_HAND"?"L":"R";
+  round.sources.add(ev.source);
+  if(mode==="practice"){
+    const want=pat()[round.entered.length];
+    if(hand===want){
+      round.entered.push({hand,source:ev.source,t:ev.timestampMs});
+      if(round.entered.length>=pat().length) finishPractice();
+      else renderStage();
+    }else{
+      round.errors++; sndErr();
+      const el=document.querySelector(`.stroke[data-i="${round.entered.length}"]`);
+      if(el){ el.classList.add("err"); setTimeout(()=>el.classList.remove("err"),200); }
+    }
+  }else{
+    round.entered.push({hand,source:ev.source,t:ev.timestampMs});
+    renderStage();
+    if(round.entered.length>=pat().length+8) submitEntry(); // runaway guard
+  }
+}
+onTrigger(ev=>{ relInput(ev); roundInput(ev); });
+
+/* ---------------- Scoring + receipt ---------------- */
+function scoreEntry(expected,entered){
+  const N=expected.length, M=entered.length;
+  let correct=0, firstError=null;
+  const marks=[];
+  for(let i=0;i<Math.max(N,M);i++){
+    const e=expected[i], g=entered[i]?entered[i].hand:null;
+    if(i<N&&g===e){ correct++; marks[i]="ok"; }
+    else{ if(firstError===null) firstError=i; if(i<N) marks[i]=g?"bad":"ghost"; }
+  }
+  return {expected:N, entered:M, correct,
+    missed:Math.max(0,N-M), extra:Math.max(0,M-N),
+    accuracy:Math.round(100*correct/N),
+    exact:M===N&&correct===N,
+    firstErrorIndex:firstError, marks};
+}
+function inputSourceOf(sources){
+  if(sources.size===0) return "none";
+  if(sources.size>1) return "mixed";
+  return [...sources][0];
+}
+
+function finishPractice(){
+  const sc=scoreEntry(pat(),round.entered);
+  sc.practiceErrors=round.errors;
+  sndWin();
+  const r=round; round=null; activeSurface=null;
+  renderStage();
+  $("#bigMsg").textContent=`Done — ${sc.expected} strokes, ${r.errors} wrong press${r.errors===1?"":"es"} along the way`;
+  $("#bigMsg").className="bigmsg ok";
+  renderReceipt(buildResult(r,sc,"practice"),sc,r);
+}
+function submitEntry(){
+  if(!round||round.phase!=="entry"||mode!=="challenge") return;
+  const sc=scoreEntry(pat(),round.entered);
+  const r=round; round=null; activeSurface=null;
+  const result=buildResult(r,sc,"challenge");
+  // store attempt (summary evidence only — no raw keystroke stream)
+  S.attempts.push(result); if(S.attempts.length>50) S.attempts=S.attempts.slice(-50);
+  let newCard=false;
+  if(sc.exact&&!S.earned[card().skillId]){ S.earned[card().skillId]=new Date().toISOString(); newCard=true; }
+  save();
+  renderStage(); renderCollection();
+  if(sc.exact){ sndWin(); $("#bigMsg").textContent="Clean round ✓"; $("#bigMsg").className="bigmsg ok"; }
+  else { sndErr(); $("#bigMsg").textContent="Not quite — see the receipt"; $("#bigMsg").className="bigmsg warn"; }
+  renderReceipt(result,sc,r,newCard);
+}
+
+function buildResult(r,sc,roundMode){
+  const c=card(), src=inputSourceOf(r.sources);
+  const validity=[];
+  if(roundMode==="practice") validity.push("formative-practice: pattern visible during entry; not stored");
+  if(r.clears) validity.push(`entry cleared ${r.clears}× before submit`);
+  if(focusLossFlag) validity.push("window lost focus during the round");
+  const deviceTest=relValid()
+    ?{status:"passed",at:S.relTest.at}
+    :{status:S.relTest?"stale-or-flagged":"not-run"};
+  return {
+    resultVersion:1, contract:ACTIVITY.resultContract,
+    appId:APP_ID, activityId:ACTIVITY.activityId, activityVersion:ACTIVITY.activityVersion,
+    scoringRuleVersion:ACTIVITY.scoringRuleVersion,
+    attemptId:"att_"+Date.now().toString(36)+Math.random().toString(36).slice(2,6),
+    skillId:c.skillId, skillVersion:1,
+    mode:roundMode, inputSource:src, deviceTest,
+    evidence:[
+      { evidenceType:"A1_ANSWER_CORRECTNESS",
+        outcome:sc.exact?"correct":"incorrect", score:sc.accuracy,
+        measured:roundMode==="challenge"
+          ?"Recall of the R/L sticking pattern, entered from memory after a timed preview"
+          :"Copy of the R/L sticking pattern with the pattern visible",
+        notMeasured:"Physical hand used, stroke quality, rhythm, timing, tone",
+        validity },
+      { evidenceType:"A2_CONTROLLER_SEQUENCE",
+        accuracy:sc.accuracy,
+        strokes:{expected:sc.expected,entered:sc.entered,correct:sc.correct,missed:sc.missed,extra:sc.extra},
+        firstErrorIndex:sc.firstErrorIndex,
+        inputSource:src,
+        measured:"Which triggers were pressed and in what order (controller input, not instrument performance)",
+        notMeasured:"Which physical hand pressed the trigger; grip, rebound, sound; rhythmic timing (not scored in this MVP)",
+        validity }
+    ],
+    settings:{mode:roundMode, patternLength:sc.expected,
+      previewSeconds:roundMode==="challenge"?5:null, refractoryMs:S.refractoryMs,
+      practiceWrongPresses:roundMode==="practice"?sc.practiceErrors:undefined},
+    startedAt:r.startedAt, completedAt:new Date().toISOString()
+  };
+}
+
+function renderReceipt(result,sc,r,newCard){
+  const c=card(), when=new Date(result.completedAt);
+  const practice=result.mode==="practice";
+  const expectedRow=pat().map((h,i)=>`<div class="stroke ${h} ${sc.marks[i]==="ok"?"ok":(sc.marks[i]?"bad":"")}">${h}${i%c.group===0?`<small>${Math.floor(i/c.group)+1}</small>`:""}</div>`).join("");
+  const enteredRow=(practice?[]:Array.from({length:Math.max(sc.expected,sc.entered)},(x,i)=>{
+    const e=r.entered[i];
+    if(!e) return `<div class="stroke ghost">·</div>`;
+    const ok=i<sc.expected&&e.hand===pat()[i];
+    return `<div class="stroke ${e.hand} ${ok?"ok":"bad"}">${e.hand}${i>=sc.expected?`<small>extra</small>`:""}</div>`;
+  })).join("");
+  const dt=result.deviceTest;
+  const relLbl=dt.status==="passed"?`✓ reliability test passed ${new Date(dt.at).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})}`
+    :dt.status==="not-run"?"reliability test not run":"reliability test stale — re-run after remap";
+  const validity=[...new Set(result.evidence.flatMap(e=>e.validity))];
+  $("#receiptZone").innerHTML=`
+  <div class="receipt">
+    <div class="rhead"><b>Result receipt — ${c.title}</b>
+      <span class="lvl">${practice?"Practice · formative, not recorded":"Challenge"}</span>
+      <span class="when">${when.toLocaleString()}</span></div>
+    <div class="rbody">
+      ${newCard?`<div class="earnbanner">🗂️ <b>Card earned:</b> ${c.title} — a clean from-memory round. Earned by skill, not purchase.</div>`:""}
+      <div class="evrow">
+        <div class="ev a1"><span class="tier">A1</span>Answer correctness — pattern ${practice?"copy":"recall"}:
+          <b class="score">${sc.exact?"correct":"incorrect"} (${sc.accuracy}%)</b></div>
+        <div class="ev a2"><span class="tier">A2</span>Controller sequence — <b class="score">${sc.correct}/${sc.expected}</b> strokes ·
+          input: ${result.inputSource}</div>
+        <div class="ev meta"><span class="tier">i</span>${relLbl}</div>
+      </div>
+      <div class="rstats">
+        <div class="rstat"><span>First error</span>${sc.firstErrorIndex===null?"none":"stroke "+(sc.firstErrorIndex+1)}</div>
+        <div class="rstat"><span>Missed</span>${sc.missed}</div>
+        <div class="rstat"><span>Extra</span>${sc.extra}</div>
+        ${practice?`<div class="rstat"><span>Wrong presses</span>${r.errors}</div>`
+                  :`<div class="rstat"><span>Entry cleared</span>${r.clears}×</div>`}
+      </div>
+      <div class="cmprow"><div style="font-size:11px;color:var(--muted);margin-bottom:6px">Expected</div>
+        <div class="strokes">${expectedRow}</div></div>
+      ${practice?"":`<div class="cmprow"><div style="font-size:11px;color:var(--muted);margin-bottom:6px">You entered</div>
+        <div class="strokes">${enteredRow}</div></div>`}
+      ${validity.length?`<div class="validity">⚑ ${validity.join(" · ")}</div>`:""}
+      <div class="boundary"><b>What this measured:</b> which of your two triggers you pressed, in what order${practice?"":", from memory"}.
+        <b>What it did not measure:</b> which physical hand you used, grip, stroke quality, sound, or timing — those stay with your teacher (or a future timing mode).
+        This is a <b>controller-input</b> result, not an instrument-performance grade.</div>
+      <div class="entryrow">
+        <button class="small" id="tryAgain">${practice?"Practice again":"Try again"}</button>
+        ${practice?`<button class="small go" id="goChallenge">Try the challenge</button>`:""}
+        <button class="small ghost" id="jsonToggle">View result JSON</button>
+        <button class="small ghost" id="jsonCopy">Copy JSON</button>
+      </div>
+      <div class="jsonbox" id="jsonBox" style="display:none"></div>
+    </div>
+  </div>`;
+  $("#tryAgain").addEventListener("click",startRound);
+  $("#goChallenge")?.addEventListener("click",()=>{setMode("challenge");startRound();});
+  const json=JSON.stringify(result,null,2);
+  $("#jsonToggle").addEventListener("click",()=>{
+    const b=$("#jsonBox"); const showing=b.style.display!=="none";
+    b.style.display=showing?"none":"block"; if(!showing) b.textContent=json;
+    $("#jsonToggle").textContent=showing?"View result JSON":"Hide result JSON";
+  });
+  $("#jsonCopy").addEventListener("click",()=>{
+    navigator.clipboard?.writeText(json).then(()=>toast("Result JSON copied"),()=>toast("Copy failed",true));
+  });
+  $("#receiptZone").scrollIntoView({behavior:"smooth",block:"nearest"});
+}
+
+/* ---------------- Collection ---------------- */
+function renderCollection(){
+  $("#collGrid").innerHTML=DECK.map(c=>{
+    const e=S.earned[c.skillId];
+    return `<div class="ccard ${e?"earned":""}">
+      <div class="nm">${e?"★ ":""}${c.title}</div>
+      <div class="pat">${c.pattern.replace(new RegExp(`(.{${c.group}})`,"g"),"$1 ").trim()}</div>
+      <div class="st">${e?"Earned "+new Date(e).toLocaleDateString():"Clean challenge round to earn"}</div>
+    </div>`;
+  }).join("");
+}
+
+/* ---------------- Misc ---------------- */
+let toastTimer=null;
+function toast(msg,warn){
+  const t=$("#toast"); t.textContent=msg; t.className="toast show"+(warn?" warn":"");
+  clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove("show"),2600);
+}
+$("#resetAll").addEventListener("click",()=>{
+  if(confirm("Reset everything stored by this prototype (bindings, test results, earned cards, attempts)?")){
+    S=defaultState(); save(); renderBindings(); renderCard(); renderRelTarget();
+    $("#relReport").classList.remove("show");
+    toast("All local data reset");
+  }
+});
+
+/* Launch-contract stub (doc 14e direction): ?skillId=…&mode=… preselects the activity */
+(function(){
+  const q=new URLSearchParams(location.search);
+  const sk=q.get("skillId"); const m=q.get("mode");
+  if(sk){ const i=DECK.findIndex(c=>c.skillId===sk); if(i>=0) S.cardIdx=i; }
+  if(m==="challenge"||m==="practice") mode=m;
+})();
+
+/* ---------------- Boot ---------------- */
+renderBindings(); renderRelTarget(); renderCard();
+setMode(mode);
+</script>
+</body>
+</html>

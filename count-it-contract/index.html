@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Count It — A1 contract proof</title>
+<style>
+  :root{
+    --bg:#0F1117; --panel:#171A22; --panel2:#1E222C; --line:#2A2F3B;
+    --ink:#E8EBF2; --muted:#9AA3B2;
+    --cobalt:#5B8CFF; --orange:#FF9A5B; --green:#34D3A6; --purple:#A78BFA;
+    --pink:#FF7DB0; --yellow:#FFCF5B;
+    --shadow:0 10px 30px rgba(0,0,0,.45);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+  a{color:var(--cobalt)}
+  .wrap{max-width:1080px;margin:0 auto;padding:18px 18px 60px;}
+  header.top{display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+    padding:12px 4px 18px;border-bottom:1px solid var(--line);margin-bottom:20px;}
+  .brand{display:flex;align-items:baseline;gap:10px}
+  .brand .logo{font-weight:800;letter-spacing:.5px;font-size:20px}
+  .brand .logo .dot{color:var(--green)}
+  .brand .deck{color:var(--muted);font-size:13px}
+  .stats{margin-left:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .pill{background:var(--panel);border:1px solid var(--line);border-radius:999px;
+    padding:6px 12px;font-size:13px;display:flex;align-items:center;gap:7px;white-space:nowrap}
+
+  .grid{display:grid;grid-template-columns:1.2fr .8fr;gap:20px}
+  @media(max-width:860px){.grid{grid-template-columns:1fr}}
+
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:18px;box-shadow:var(--shadow)}
+  .panel h3{margin:0 0 4px;font-size:15px;display:flex;align-items:center;gap:8px}
+  .panel .sub{color:var(--muted);font-size:12.5px;margin:0 0 14px;line-height:1.5}
+
+  button{font:inherit;cursor:pointer;border-radius:10px;border:1px solid var(--line);
+    background:var(--panel);color:var(--ink);padding:10px 14px;transition:.15s}
+  button:hover{border-color:#3a4150;background:var(--panel2)}
+  button:active{transform:translateY(1px)}
+  button.primary{background:var(--green);border-color:var(--green);color:#062018;font-weight:700}
+  button.ghost{background:transparent}
+  button.small{padding:5px 10px;font-size:12.5px;border-radius:8px}
+  button:disabled{opacity:.4;cursor:not-allowed}
+
+  /* ---- Card / quiz zone ---- */
+  .card{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);
+    border-radius:18px;box-shadow:var(--shadow);padding:22px}
+  .accent{height:5px;border-radius:6px;width:52px;background:var(--green);margin-bottom:14px}
+  .cardhead{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .cardhead h2{margin:0;font-size:21px}
+  .lvl{background:#0b0d12;border:1px solid var(--line);border-radius:6px;color:var(--muted);
+    padding:3px 8px;font-size:11px}
+  .skillid{margin-left:auto;font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace;
+    font-size:11px;color:var(--muted)}
+  .carddesc{color:var(--muted);font-size:13.5px;margin:6px 0 0;line-height:1.5}
+  .deck-nav{display:flex;gap:8px;margin-top:14px;align-items:center;flex-wrap:wrap}
+
+  .stage{margin-top:16px;background:#0b0d12;border:1px solid var(--line);border-radius:14px;
+    padding:18px;min-height:170px;display:flex;flex-direction:column;gap:14px}
+  .stage .statusline{font-size:13px;color:var(--muted);display:flex;align-items:center;gap:10px;min-height:20px}
+  .stage .statusline b{color:var(--ink)}
+  .stage .statusline .count{margin-left:auto;font-family:"SF Mono",ui-monospace,Menlo,monospace}
+  .question{font-size:17.5px;font-weight:600;line-height:1.45}
+  .opts{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  @media(max-width:560px){.opts{grid-template-columns:1fr}}
+  .opt{padding:14px;border-radius:12px;border:2px solid var(--line);background:var(--panel);
+    font-size:15px;text-align:left;font-family:inherit}
+  .opt .mono{font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace;letter-spacing:1.5px}
+  .opt.right{border-color:var(--green);background:#0f1a17}
+  .opt.wrong{border-color:#e0554f;background:#1f1113}
+  .opt.dim{opacity:.5}
+  .explain{font-size:13.5px;color:var(--muted);line-height:1.55;min-height:20px}
+  .explain b{color:var(--ink)}
+  .bigmsg{font-size:17px;font-weight:700;min-height:24px}
+  .bigmsg.ok{color:var(--green)} .bigmsg.warn{color:var(--orange)}
+
+  /* ---- Receipt (shared look with Copy the Sticking) ---- */
+  .receipt{margin-top:16px;border:1px solid var(--line);border-radius:14px;overflow:hidden}
+  .receipt .rhead{background:var(--panel2);padding:12px 16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;border-bottom:1px solid var(--line)}
+  .receipt .rhead b{font-size:14.5px}
+  .receipt .rhead .when{margin-left:auto;color:var(--muted);font-size:11.5px}
+  .receipt .rbody{padding:14px 16px;display:flex;flex-direction:column;gap:12px;background:#0d0f15}
+  .evrow{display:flex;gap:8px;flex-wrap:wrap}
+  .ev{border-radius:10px;padding:8px 12px;font-size:12.5px;border:1px solid var(--line);background:var(--panel)}
+  .ev .tier{display:inline-block;font-weight:800;border-radius:5px;padding:1px 7px;font-size:11px;margin-right:7px;color:#0b0d12}
+  .ev.a1 .tier{background:var(--green)}
+  .ev.meta .tier{background:var(--muted)}
+  .ev b.score{font-size:13px}
+  .qreview{display:flex;flex-direction:column;gap:6px}
+  .qrow{display:flex;gap:10px;align-items:baseline;font-size:12.5px;background:var(--panel);
+    border:1px solid var(--line);border-radius:8px;padding:8px 10px}
+  .qrow .mark{font-weight:800}
+  .qrow .mark.ok{color:var(--green)} .qrow .mark.bad{color:#ff9db0}
+  .qrow .qq{color:var(--muted)}
+  .qrow .aa{margin-left:auto;text-align:right;font-family:"SF Mono",ui-monospace,Menlo,monospace;font-size:11.5px;white-space:nowrap}
+  .boundary{background:#12141c;border:1px dashed var(--line);border-radius:10px;padding:10px 12px;font-size:12.5px;color:var(--muted);line-height:1.55}
+  .boundary b{color:var(--ink)}
+  .jsonbox{background:#0b0d12;border:1px solid var(--line);border-radius:10px;padding:12px;
+    font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace;font-size:11px;line-height:1.5;
+    white-space:pre;overflow-x:auto;color:#b9c2d8;max-height:300px;overflow-y:auto}
+  .entryrow{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+
+  /* ---- Cross-app skill profile ---- */
+  .profrow{display:flex;flex-direction:column;gap:10px}
+  .prof{background:#0b0d12;border:1px solid var(--line);border-radius:12px;padding:12px}
+  .prof .pt{font-weight:700;font-size:13.5px;margin-bottom:8px;display:flex;align-items:center;gap:8px}
+  .prof .pt .star{color:var(--purple)}
+  .prof .dims{display:flex;gap:6px;flex-wrap:wrap}
+  .dim{border:1px solid var(--line);border-radius:999px;padding:4px 10px;font-size:11.5px;color:var(--muted);background:var(--panel)}
+  .dim b{color:var(--ink)}
+  .dim.a1{border-color:#2f5a4c} .dim.a2{border-color:#39406b}
+  .dim.none{border-style:dashed;opacity:.6}
+  .dim .src{opacity:.75}
+  .profnote{color:var(--muted);font-size:11.5px;line-height:1.5;margin-top:12px}
+
+  footer{margin-top:26px;color:var(--muted);font-size:11.5px;text-align:center;line-height:1.6}
+  .foot-reset{background:none;border:none;color:var(--cobalt);cursor:pointer;font-size:11.5px;padding:0;text-decoration:underline}
+
+  .toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(30px);
+    background:var(--green);color:#062018;font-weight:700;padding:12px 18px;border-radius:12px;
+    box-shadow:var(--shadow);opacity:0;transition:.3s;pointer-events:none;z-index:20;font-size:14px}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <div class="logo">Count It<span class="dot">.</span></div>
+      <div class="deck">A1 contract proof · non-controller activity</div>
+    </div>
+    <div class="stats">
+      <div class="pill">Evidence: <b>A1 · answer correctness</b></div>
+    </div>
+  </header>
+
+  <div class="grid">
+    <!-- ============ LEFT: quiz ============ -->
+    <section>
+      <div class="card">
+        <div class="accent"></div>
+        <div class="cardhead">
+          <h2 id="cardTitle">—</h2>
+          <span class="lvl" id="cardLvl">Level 1</span>
+          <span class="skillid" id="cardSkill">—</span>
+        </div>
+        <p class="carddesc" id="cardDesc"></p>
+        <div class="deck-nav">
+          <button class="small" id="prevCard">◀ Prev</button>
+          <button class="small" id="nextCard">Next ▶</button>
+        </div>
+
+        <div class="stage">
+          <div class="statusline">
+            <b id="stageState">Ready</b><span id="stageHint"></span>
+            <span class="count" id="stageCount"></span>
+          </div>
+          <div class="question" id="qText" style="display:none"></div>
+          <div class="opts" id="optGrid"></div>
+          <div class="explain" id="explain"></div>
+          <div class="bigmsg" id="bigMsg"></div>
+          <div class="entryrow">
+            <button class="primary" id="startBtn">Start quiz</button>
+            <button id="nextQ" style="display:none">Next question</button>
+            <button class="ghost" id="cancelBtn" style="display:none">Cancel</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="receiptZone"></div>
+    </section>
+
+    <!-- ============ RIGHT: cross-app profile + contract note ============ -->
+    <section style="display:flex;flex-direction:column;gap:20px">
+      <div class="panel">
+        <h3>🧬 Skill profile — cross-app</h3>
+        <p class="sub">One skill, evidence from multiple apps, one shared contract — the doc-14 product gate this prototype exists to prove. Dimensions stay separate; nothing collapses into a single grade.</p>
+        <div class="profrow" id="profGrid"></div>
+        <p class="profnote">Prototype note: this panel reads both apps' results from this browser's local storage (same origin). Making this persistent, cross-device, and teacher-visible is exactly what the paid Praxis layer is for.</p>
+      </div>
+
+      <div class="panel">
+        <h3>📦 The shared contract</h3>
+        <p class="sub">This quiz emits the same versioned <b>praxis.result.v0_1</b> payload as Copy the Sticking — same envelope, different evidence type (<b>A1</b> answer correctness instead of A2 controller sequence). No controller, no reliability test, no timing claims. Launch with <span style="font-family:'SF Mono',ui-monospace,Menlo,monospace">?skillId=…</span> to preselect a skill, same as the trigger app.</p>
+        <div class="entryrow">
+          <button class="small" id="openSibling">Open Copy the Sticking ↗</button>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <footer>
+    Prototype · part of the Backwerd Rhythm Shop app family · the non-controller contract proof for <b>Praxis</b> (Notion doc 14, gate 1).<br>
+    Everything stays in this browser — no account, no student data leaves the page. <button class="foot-reset" id="resetAll">Reset this app's local data</button><br>
+    © 2026 Backwerd Rimshot, LLC. All rights reserved.
+  </footer>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* =====================================================================
+   Count It — A1 contract proof (Notion doc 14, product gate 1)
+   A non-controller activity emitting A1_ANSWER_CORRECTNESS through the
+   same praxis.result.v0_1 envelope as the Stick Lab trigger MVP.
+   Skills belong to Praxis: same skillIds, no duplicated definitions.
+   ===================================================================== */
+const $=s=>document.querySelector(s);
+const APP_ID="backwerd.count-it.contract-proof";
+const ACTIVITY={activityId:"count-it-a1-quiz", activityVersion:"0.1.0",
+  scoringRuleVersion:"mc-0.1", resultContract:"praxis.result.v0_1"};
+
+/* Skill references — canonical IDs shared with apps/copy-the-sticking */
+const SKILLS=[
+  {skillId:"rudiment.single-stroke-roll.core", title:"Single stroke roll", level:1, pattern:"RLRL RLRL",
+   desc:"Alternating hands, one stroke each. Can you name it, spell it, and spot it?"},
+  {skillId:"rudiment.double-stroke-roll.core", title:"Double stroke roll", level:1, pattern:"RRLL RRLL",
+   desc:"Two strokes per hand. Knowledge check: structure, spelling, and what repeats."},
+  {skillId:"rudiment.single-paradiddle.core", title:"Single paradiddle", level:2, pattern:"RLRR LRLL",
+   desc:"Single, single, double. The knowledge half of the skill Copy the Sticking tests through triggers."},
+  {skillId:"rudiment.double-paradiddle.core", title:"Double paradiddle", level:3, pattern:"RLRLRR LRLRLL",
+   desc:"Two singles, then a paradiddle. Six notes per side."},
+  {skillId:"rudiment.paradiddle-diddle.core", title:"Paradiddle-diddle", level:3, pattern:"RLRRLL RLRRLL",
+   desc:"Paradiddle plus one more diddle — and the lead hand does not alternate."},
+];
+const NAMES=SKILLS.map(s=>s.title);
+
+/* Question bank: 4 handwritten questions per skill. m() marks sticking options monospace. */
+const m=t=>({t,mono:true});
+const QUESTIONS={
+ "rudiment.single-stroke-roll.core":[
+  {q:"Which sticking is a single stroke roll?", correct:m("RLRL RLRL"),
+   wrong:[m("RRLL RRLL"),m("RLRR LRLL"),m("RLLR RLLR")],
+   explain:"Single stroke = strictly alternating hands, one stroke each: <b>RLRL RLRL</b>."},
+  {q:"In a single stroke roll, how many strokes does each hand play in a row?", correct:{t:"1"},
+   wrong:[{t:"2"},{t:"3"},{t:"4"}],
+   explain:"One stroke per hand, always alternating — that's what makes it <b>single</b> stroke."},
+  {q:"Which rudiment is RLRL RLRL?", correct:{t:"Single stroke roll"},
+   wrong:[{t:"Double stroke roll"},{t:"Single paradiddle"},{t:"Paradiddle-diddle"}],
+   explain:"Strict alternation with no doubles is the <b>single stroke roll</b>."},
+  {q:"If a single stroke roll starts on the left hand, the sticking is…", correct:m("LRLR LRLR"),
+   wrong:[m("LLRR LLRR"),m("LRLL RLRR"),m("LRRL LRRL")],
+   explain:"Same rule, mirrored start: alternate every stroke — <b>LRLR LRLR</b>."}],
+ "rudiment.double-stroke-roll.core":[
+  {q:"Which sticking is a double stroke roll?", correct:m("RRLL RRLL"),
+   wrong:[m("RLRL RLRL"),m("RLRR LRLL"),m("RLLR LRRL")],
+   explain:"Each hand plays exactly two strokes before switching: <b>RRLL RRLL</b>."},
+  {q:"In a double stroke roll, how many strokes does each hand play in a row?", correct:{t:"2"},
+   wrong:[{t:"1"},{t:"3"},{t:"4"}],
+   explain:"Two per hand — the \"double\" in double stroke roll."},
+  {q:"Which rudiment is RRLL RRLL?", correct:{t:"Double stroke roll"},
+   wrong:[{t:"Single stroke roll"},{t:"Double paradiddle"},{t:"Single paradiddle"}],
+   explain:"Paired strokes on each hand make it the <b>double stroke roll</b>."},
+  {q:"In a double stroke roll, what four strokes come after RRLL?", correct:m("RRLL"),
+   wrong:[m("LLRR"),m("RLRL"),m("LRLR")],
+   explain:"The pattern simply repeats: <b>RRLL</b> again — the lead hand never changes."}],
+ "rudiment.single-paradiddle.core":[
+  {q:"Which sticking is a single paradiddle?", correct:m("RLRR LRLL"),
+   wrong:[m("RLRL RLRL"),m("RRLL RRLL"),m("RLLR LRRL")],
+   explain:"Single, single, double: <b>RLRR</b>, then mirrored: <b>LRLL</b>."},
+  {q:"Which hand leads the second half (LRLL) of a single paradiddle?", correct:{t:"Left"},
+   wrong:[{t:"Right"},{t:"Either hand"},{t:"Both together"}],
+   explain:"The ending double (…RR) hands the lead to the <b>left</b> — that flip is the point of the paradiddle."},
+  {q:"Which rudiment is RLRR LRLL?", correct:{t:"Single paradiddle"},
+   wrong:[{t:"Double paradiddle"},{t:"Paradiddle-diddle"},{t:"Double stroke roll"}],
+   explain:"Two singles and a double, alternating lead: the <b>single paradiddle</b>."},
+  {q:"After RLRR, what four strokes come next in a single paradiddle?", correct:m("LRLL"),
+   wrong:[m("RLRR"),m("RLLR"),m("LLRR")],
+   explain:"The pattern mirrors itself — <b>LRLL</b>, left hand leading."}],
+ "rudiment.double-paradiddle.core":[
+  {q:"Which sticking is a double paradiddle?", correct:m("RLRLRR LRLRLL"),
+   wrong:[m("RLRR LRLL"),m("RRLL RRLL"),m("RLRRLL RLRRLL")],
+   explain:"Two extra singles in front of each paradiddle: <b>RLRLRR LRLRLL</b>."},
+  {q:"How many notes does each side of a double paradiddle have?", correct:{t:"6"},
+   wrong:[{t:"4"},{t:"8"},{t:"12"}],
+   explain:"Six per side — which is why it sits naturally in triplet or 6/8 feels."},
+  {q:"What makes a double paradiddle \"double\"?", correct:{t:"Two extra single strokes before the diddle"},
+   wrong:[{t:"Two diddles in a row"},{t:"It's played twice as fast"},{t:"Both hands strike together"}],
+   explain:"RL + RLRR: the <b>two extra singles</b> at the front, not extra doubles."},
+  {q:"Which rudiment is RLRLRR LRLRLL?", correct:{t:"Double paradiddle"},
+   wrong:[{t:"Single paradiddle"},{t:"Paradiddle-diddle"},{t:"Single stroke roll"}],
+   explain:"Six notes per side, alternating lead: the <b>double paradiddle</b>."}],
+ "rudiment.paradiddle-diddle.core":[
+  {q:"Which sticking is a paradiddle-diddle?", correct:m("RLRRLL RLRRLL"),
+   wrong:[m("RLRR LRLL"),m("RLRLRR LRLRLL"),m("RRLL RRLL")],
+   explain:"A paradiddle plus one more diddle: <b>RLRRLL</b> — then it repeats."},
+  {q:"Does the lead hand alternate in a paradiddle-diddle?", correct:{t:"No — it stays on the same hand"},
+   wrong:[{t:"Yes — every six notes"},{t:"Yes — every twelve notes"},{t:"Only at slow tempos"}],
+   explain:"Unlike the paradiddle family's usual flip, <b>the same hand keeps the lead</b> every cycle."},
+  {q:"Which rudiment is RLRRLL?", correct:{t:"Paradiddle-diddle"},
+   wrong:[{t:"Single paradiddle"},{t:"Double paradiddle"},{t:"Double stroke roll"}],
+   explain:"Single, single, double, double — six notes: the <b>paradiddle-diddle</b>."},
+  {q:"A paradiddle-diddle is a single paradiddle plus…", correct:{t:"One more diddle"},
+   wrong:[{t:"One more single stroke"},{t:"An accent"},{t:"A rest"}],
+   explain:"RLRR + <b>LL</b>: one extra diddle on the opposite hand."}],
+};
+
+/* ---------------- Persistent state ---------------- */
+const LS_KEY="praxis.cia1.v1";
+const SIBLING_LS_KEY="praxis.cts.v1";   // Copy the Sticking's store (read-only here)
+function defaultState(){return{attempts:[],cardIdx:0};}
+let S=defaultState();
+try{const raw=localStorage.getItem(LS_KEY); if(raw) S=Object.assign(defaultState(),JSON.parse(raw));}catch(e){}
+function save(){try{localStorage.setItem(LS_KEY,JSON.stringify(S));}catch(e){}}
+
+/* ---------------- Audio (light) ---------------- */
+let AC=null;
+function ac(){ if(!AC){ try{AC=new (window.AudioContext||window.webkitAudioContext)();}catch(e){} }
+  if(AC&&AC.state==="suspended") AC.resume(); return AC; }
+function blip(freq,dur=0.06,type="triangle",gain=0.15){
+  const c=ac(); if(!c) return;
+  const o=c.createOscillator(), g=c.createGain();
+  o.type=type; o.frequency.value=freq;
+  g.gain.setValueAtTime(gain,c.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.0001,c.currentTime+dur);
+  o.connect(g).connect(c.destination); o.start(); o.stop(c.currentTime+dur+0.02);
+}
+const sndOk=()=>blip(659.25,.08);
+const sndBad=()=>blip(150,.12,"square",0.1);
+const sndWin=()=>{blip(523.25,.09);setTimeout(()=>blip(659.25,.09),90);setTimeout(()=>blip(783.99,.14),180);};
+
+/* ---------------- Quiz engine ---------------- */
+let quiz=null; // {qs:[{...,options:[],pickedIdx,correctIdx}], i, answered, startedAt}
+function card(){ return SKILLS[S.cardIdx]; }
+
+function shuffle(a){ const x=[...a]; for(let i=x.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[x[i],x[j]]=[x[j],x[i]];} return x; }
+
+function renderCard(){
+  const c=card();
+  $("#cardTitle").textContent=c.title;
+  $("#cardLvl").textContent="Level "+c.level;
+  $("#cardSkill").textContent=c.skillId;
+  $("#cardDesc").textContent=c.desc;
+  $("#receiptZone").innerHTML="";
+  renderStage(); renderProfile();
+}
+$("#prevCard").addEventListener("click",()=>{ quiz=null; S.cardIdx=(S.cardIdx-1+SKILLS.length)%SKILLS.length; save(); renderCard(); });
+$("#nextCard").addEventListener("click",()=>{ quiz=null; S.cardIdx=(S.cardIdx+1)%SKILLS.length; save(); renderCard(); });
+
+function renderStage(){
+  const st=$("#stageState"), hint=$("#stageHint"), cnt=$("#stageCount");
+  $("#bigMsg").textContent=""; $("#bigMsg").className="bigmsg";
+  $("#explain").innerHTML="";
+  if(!quiz){
+    st.textContent="Ready"; hint.textContent="— 4 questions about this skill";
+    cnt.textContent="";
+    $("#qText").style.display="none"; $("#optGrid").innerHTML="";
+    $("#startBtn").style.display=""; $("#nextQ").style.display="none"; $("#cancelBtn").style.display="none";
+    return;
+  }
+  const Q=quiz.qs[quiz.i];
+  st.textContent="Question "+(quiz.i+1); hint.textContent="";
+  cnt.textContent=(quiz.i+1)+" / "+quiz.qs.length;
+  $("#qText").style.display=""; $("#qText").textContent=Q.q;
+  $("#startBtn").style.display="none"; $("#cancelBtn").style.display="";
+  $("#nextQ").style.display="none";
+  $("#optGrid").innerHTML=Q.options.map((o,i)=>
+    `<button class="opt" data-i="${i}">${o.mono?`<span class="mono">${o.t}</span>`:o.t}</button>`).join("");
+  document.querySelectorAll(".opt").forEach(b=>b.addEventListener("click",()=>pick(+b.dataset.i)));
+}
+
+$("#startBtn").addEventListener("click",startQuiz);
+function startQuiz(){
+  ac();
+  const bank=QUESTIONS[card().skillId];
+  quiz={qs:bank.map(q=>{
+      const options=shuffle([q.correct,...q.wrong]);
+      return {q:q.q,explain:q.explain,options,correctIdx:options.indexOf(q.correct),pickedIdx:null};
+    }), i:0, startedAt:new Date().toISOString()};
+  $("#receiptZone").innerHTML="";
+  renderStage();
+}
+$("#cancelBtn").addEventListener("click",()=>{ quiz=null; renderStage(); });
+
+function pick(i){
+  const Q=quiz.qs[quiz.i];
+  if(Q.pickedIdx!==null) return;      // one answer per question
+  Q.pickedIdx=i;
+  const ok=i===Q.correctIdx;
+  document.querySelectorAll(".opt").forEach((b,bi)=>{
+    if(bi===Q.correctIdx) b.classList.add("right");
+    else if(bi===i) b.classList.add("wrong");
+    else b.classList.add("dim");
+    b.disabled=true;
+  });
+  (ok?sndOk:sndBad)();
+  $("#explain").innerHTML=(ok?"✓ ":"✗ ")+Q.explain;
+  if(quiz.i<quiz.qs.length-1){ $("#nextQ").style.display=""; }
+  else setTimeout(finishQuiz,700);
+}
+$("#nextQ").addEventListener("click",()=>{ quiz.i++; renderStage(); });
+
+/* ---------------- Scoring + shared-contract result ---------------- */
+function finishQuiz(){
+  const qs=quiz.qs, total=qs.length;
+  const correct=qs.filter(q=>q.pickedIdx===q.correctIdx).length;
+  const score=Math.round(100*correct/total);
+  const q=quiz; quiz=null;
+  const result=buildResult(q,{total,correct,score});
+  S.attempts.push(result); if(S.attempts.length>50) S.attempts=S.attempts.slice(-50);
+  save();
+  renderStage(); renderProfile();
+  if(score===100){ sndWin(); $("#bigMsg").textContent="Perfect round ✓"; $("#bigMsg").className="bigmsg ok"; }
+  else { $("#bigMsg").textContent=correct+" of "+total+" — see the receipt"; $("#bigMsg").className="bigmsg warn"; }
+  renderReceipt(result,q,{total,correct,score});
+}
+
+function buildResult(q,sc){
+  const c=card();
+  return {
+    resultVersion:1, contract:ACTIVITY.resultContract,
+    appId:APP_ID, activityId:ACTIVITY.activityId, activityVersion:ACTIVITY.activityVersion,
+    scoringRuleVersion:ACTIVITY.scoringRuleVersion,
+    attemptId:"att_"+Date.now().toString(36)+Math.random().toString(36).slice(2,6),
+    skillId:c.skillId, skillVersion:1,
+    mode:"quiz", inputSource:"pointer",
+    deviceTest:{status:"not-applicable"},      // non-controller activity
+    evidence:[
+      { evidenceType:"A1_ANSWER_CORRECTNESS",
+        outcome:sc.score===100?"correct":"partially-correct", score:sc.score,
+        items:{total:sc.total,correct:sc.correct},
+        measured:"Selected answers to structured questions about the "+c.title+" sticking (name, spelling, structure)",
+        notMeasured:"Entering the pattern through triggers, physical performance, rhythm, timing, tone",
+        validity:[] }
+    ],
+    settings:{questionCount:sc.total, optionsPerQuestion:4, feedback:"immediate"},
+    startedAt:q.startedAt, completedAt:new Date().toISOString()
+  };
+}
+
+function renderReceipt(result,q,sc){
+  const c=card(), when=new Date(result.completedAt);
+  const rows=q.qs.map((Q,i)=>{
+    const ok=Q.pickedIdx===Q.correctIdx;
+    const pickedT=Q.options[Q.pickedIdx].t, correctT=Q.options[Q.correctIdx].t;
+    return `<div class="qrow"><span class="mark ${ok?"ok":"bad"}">${ok?"✓":"✗"}</span>
+      <span class="qq">Q${i+1}</span> ${Q.q}
+      <span class="aa">${ok?correctT:pickedT+" → "+correctT}</span></div>`;
+  }).join("");
+  $("#receiptZone").innerHTML=`
+  <div class="receipt">
+    <div class="rhead"><b>Result receipt — ${c.title}</b>
+      <span class="lvl">Quiz · non-controller</span>
+      <span class="when">${when.toLocaleString()}</span></div>
+    <div class="rbody">
+      <div class="evrow">
+        <div class="ev a1"><span class="tier">A1</span>Answer correctness — knowledge quiz:
+          <b class="score">${sc.correct}/${sc.total} (${sc.score}%)</b></div>
+        <div class="ev meta"><span class="tier">i</span>no controller involved — reliability test not applicable</div>
+      </div>
+      <div class="qreview">${rows}</div>
+      <div class="boundary"><b>What this measured:</b> whether you selected the right answers about the ${c.title} — its name, spelling, and structure.
+        <b>What it did not measure:</b> entering the pattern through triggers (that's Copy the Sticking's A2 lane), or playing it on an instrument — that stays with your teacher.
+        Same skill, different evidence dimension.</div>
+      <div class="entryrow">
+        <button class="small" id="tryAgain">Try again</button>
+        <button class="small" id="goSibling">Enter it through triggers ↗</button>
+        <button class="small ghost" id="jsonToggle">View result JSON</button>
+        <button class="small ghost" id="jsonCopy">Copy JSON</button>
+      </div>
+      <div class="jsonbox" id="jsonBox" style="display:none"></div>
+    </div>
+  </div>`;
+  $("#tryAgain").addEventListener("click",startQuiz);
+  $("#goSibling").addEventListener("click",()=>openSibling(c.skillId));
+  const json=JSON.stringify(result,null,2);
+  $("#jsonToggle").addEventListener("click",()=>{
+    const b=$("#jsonBox"); const showing=b.style.display!=="none";
+    b.style.display=showing?"none":"block"; if(!showing) b.textContent=json;
+    $("#jsonToggle").textContent=showing?"View result JSON":"Hide result JSON";
+  });
+  $("#jsonCopy").addEventListener("click",()=>{
+    navigator.clipboard?.writeText(json).then(()=>toast("Result JSON copied"),()=>toast("Copy failed"));
+  });
+  $("#receiptZone").scrollIntoView({behavior:"smooth",block:"nearest"});
+}
+
+/* =====================================================================
+   Cross-app skill profile — the doc-14 gate demo.
+   Reads this app's attempts + Copy the Sticking's local attempts and
+   shows separate evidence dimensions per skill (never one number).
+   ===================================================================== */
+function latestBySkill(attempts,skillId){
+  let best=null;
+  for(const a of attempts||[]) if(a.skillId===skillId&&(!best||a.completedAt>best.completedAt)) best=a;
+  return best;
+}
+function renderProfile(){
+  let sib=null;
+  try{const raw=localStorage.getItem(SIBLING_LS_KEY); if(raw) sib=JSON.parse(raw);}catch(e){}
+  $("#profGrid").innerHTML=SKILLS.map(s=>{
+    const quizA=latestBySkill(S.attempts,s.skillId);
+    const trigA=latestBySkill(sib&&sib.attempts,s.skillId);
+    const earned=sib&&sib.earned&&sib.earned[s.skillId];
+    const dims=[];
+    dims.push(quizA
+      ?`<span class="dim a1"><b>${quizA.evidence[0].score}%</b> knowledge quiz <span class="src">· Count It</span></span>`
+      :`<span class="dim none">knowledge quiz — no evidence yet</span>`);
+    if(trigA){
+      const a1=trigA.evidence.find(e=>e.evidenceType==="A1_ANSWER_CORRECTNESS");
+      const a2=trigA.evidence.find(e=>e.evidenceType==="A2_CONTROLLER_SEQUENCE");
+      if(a1) dims.push(`<span class="dim a1"><b>${a1.score}%</b> pattern recall <span class="src">· Stick Lab</span></span>`);
+      if(a2) dims.push(`<span class="dim a2"><b>${a2.accuracy}%</b> controller sequence <span class="src">· Stick Lab</span></span>`);
+    } else dims.push(`<span class="dim none">controller sequence — no evidence yet</span>`);
+    dims.push(`<span class="dim none">teacher pass-off — pending</span>`);
+    return `<div class="prof"><div class="pt">${earned?'<span class="star">★</span>':""}${s.title}</div>
+      <div class="dims">${dims.join("")}</div></div>`;
+  }).join("");
+}
+
+/* ---------------- Misc ---------------- */
+function siblingUrl(skillId){
+  const base=location.pathname.replace(/count-it-contract\/?(index\.html)?$/,"copy-the-sticking/");
+  return base+(skillId?"?skillId="+encodeURIComponent(skillId):"");
+}
+function openSibling(skillId){ location.href=siblingUrl(skillId||card().skillId); }
+$("#openSibling").addEventListener("click",()=>openSibling());
+
+let toastTimer=null;
+function toast(msg){
+  const t=$("#toast"); t.textContent=msg; t.className="toast show";
+  clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove("show"),2600);
+}
+$("#resetAll").addEventListener("click",()=>{
+  if(confirm("Reset this app's stored quiz attempts? (Copy the Sticking's data is untouched.)")){
+    S=defaultState(); save(); renderCard(); toast("Quiz data reset");
+  }
+});
+
+/* Launch-contract stub — same shape as the trigger app: ?skillId=… preselects */
+(function(){
+  const q=new URLSearchParams(location.search);
+  const sk=q.get("skillId");
+  if(sk){ const i=SKILLS.findIndex(c=>c.skillId===sk); if(i>=0) S.cardIdx=i; }
+})();
+
+/* ---------------- Boot ---------------- */
+renderCard();
+</script>
+</body>
+</html>
