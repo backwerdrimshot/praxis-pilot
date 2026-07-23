@@ -198,6 +198,7 @@
 </div>
 <div class="toast" id="toast"></div>
 
+<script src="../shared/praxis-results.js"></script>
 <script>
 /* =====================================================================
    Count It — A1 contract proof (Notion doc 14, product gate 1)
@@ -312,6 +313,11 @@ let S=defaultState();
 try{const raw=localStorage.getItem(LS_KEY); if(raw) S=Object.assign(defaultState(),JSON.parse(raw));}catch(e){}
 function save(){try{localStorage.setItem(LS_KEY,JSON.stringify(S));}catch(e){}}
 
+/* Shared cross-app ledger (doc 16): migrate this app's + the sibling's local
+   attempts once on load; the combined profile below reads only the ledger. */
+const LEDGER=PraxisResults.create();
+LEDGER.migrateLegacy();
+
 /* ---------------- Audio (light) ---------------- */
 let AC=null;
 function ac(){ if(!AC){ try{AC=new (window.AudioContext||window.webkitAudioContext)();}catch(e){} }
@@ -411,6 +417,7 @@ function finishQuiz(){
   const q=quiz; quiz=null;
   const result=buildResult(q,{total,correct,score});
   S.attempts.push(result); if(S.attempts.length>50) S.attempts=S.attempts.slice(-50);
+  LEDGER.append(result);   // cross-app source of truth (doc 16)
   save();
   renderStage(); renderProfile();
   if(score===100){ sndWin(); $("#bigMsg").textContent="Perfect round ✓"; $("#bigMsg").className="bigmsg ok"; }
@@ -500,24 +507,23 @@ function latestBySkill(attempts,skillId){
   return best;
 }
 function renderProfile(){
-  let sib=null;
-  try{const raw=localStorage.getItem(SIBLING_LS_KEY); if(raw) sib=JSON.parse(raw);}catch(e){}
+  // reads ONLY the normalized shared ledger (doc 16), not the two apps' raw stores
   $("#profGrid").innerHTML=SKILLS.filter(s=>LAUNCH_SKILLS.has(s.skillId)).map(s=>{
-    const quizA=latestBySkill(S.attempts,s.skillId);
-    const trigA=latestBySkill(sib&&sib.attempts,s.skillId);
-    const earned=sib&&sib.earned&&sib.earned[s.skillId];
+    const p=LEDGER.profile(s.skillId);
     const dims=[];
-    dims.push(quizA
-      ?`<span class="dim a1"><b>${quizA.evidence[0].score}%</b> knowledge quiz <span class="src">· Count It</span></span>`
+    dims.push(p.knowledge
+      ?`<span class="dim a1"><b>${p.knowledge.score}%</b> knowledge quiz <span class="src">· Count It</span></span>`
       :`<span class="dim none">knowledge quiz — no evidence yet</span>`);
-    if(trigA){
-      const a1=trigA.evidence.find(e=>e.evidenceType==="A1_ANSWER_CORRECTNESS");
-      const a2=trigA.evidence.find(e=>e.evidenceType==="A2_CONTROLLER_SEQUENCE");
-      if(a1) dims.push(`<span class="dim a1"><b>${a1.score}%</b> pattern recall <span class="src">· Stick Lab</span></span>`);
-      if(a2) dims.push(`<span class="dim a2"><b>${a2.accuracy}%</b> controller sequence <span class="src">· Stick Lab</span></span>`);
-    } else dims.push(`<span class="dim none">controller sequence — no evidence yet</span>`);
+    if(p.recall)
+      dims.push(`<span class="dim a1"><b>${p.recall.score}%</b> pattern recall <span class="src">· Stick Lab</span></span>`);
+    if(p.sequence)
+      dims.push(`<span class="dim a2"><b>${p.sequence.score}%</b> controller sequence${p.sequence.qualifying?"":' <span class="src">(unverified)</span>'} <span class="src">· Stick Lab</span></span>`);
+    if(!p.recall&&!p.sequence)
+      dims.push(`<span class="dim none">controller evidence — no evidence yet</span>`);
     dims.push(`<span class="dim none">teacher pass-off — pending</span>`);
-    return `<div class="prof"><div class="pt">${earned?'<span class="star">★</span>':""}${s.title}</div>
+    // provisional "ready for teacher" proxy until the state engine lands (doc 16 step 6)
+    const ready=p.knowledge&&p.knowledge.score===100&&p.sequence&&p.sequence.qualifying&&p.sequence.score===100;
+    return `<div class="prof"><div class="pt">${ready?'<span class="star">★</span>':""}${s.title}</div>
       <div class="dims">${dims.join("")}</div></div>`;
   }).join("");
 }

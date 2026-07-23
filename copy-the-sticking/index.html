@@ -297,6 +297,7 @@
 <div class="toast" id="toast"></div>
 
 <script src="../shared/praxis-input.js"></script>
+<script src="../shared/praxis-results.js"></script>
 <script>
 /* =====================================================================
    Copy the Sticking — Stick Lab two-trigger MVP
@@ -350,6 +351,11 @@ function defaultState(){return{
 let S=defaultState();
 try{const raw=localStorage.getItem(LS_KEY); if(raw) S=Object.assign(defaultState(),JSON.parse(raw));}catch(e){}
 function save(){try{localStorage.setItem(LS_KEY,JSON.stringify(S));}catch(e){}}
+
+/* Shared cross-app ledger (doc 16): migrate this app's + the sibling's local
+   attempts once on load, then dual-write new results as they happen. */
+const LEDGER=PraxisResults.create();
+LEDGER.migrateLegacy();
 
 /* ---------------- Audio (Web Audio, lazy) ---------------- */
 let AC=null;
@@ -743,6 +749,7 @@ function submitEntry(){
   const result=buildResult(r,sc,"challenge");
   // store attempt (summary evidence only — no raw keystroke stream)
   S.attempts.push(result); if(S.attempts.length>50) S.attempts=S.attempts.slice(-50);
+  LEDGER.append(result);   // cross-app source of truth (doc 16)
   let newCard=false;
   const qualifying=sc.exact&&relValid();   // clean AND reliability-verified
   if(qualifying&&!S.earned[card().skillId]){ S.earned[card().skillId]=new Date().toISOString(); newCard=true; }
