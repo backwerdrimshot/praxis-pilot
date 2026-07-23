@@ -224,6 +224,15 @@ const SKILLS=[
    desc:"Paradiddle plus one more diddle — and the lead hand does not alternate."},
 ];
 const NAMES=SKILLS.map(s=>s.title);
+/* v0.1 scope lock (doc 16): only these three skills appear in the launch nav and
+   the combined profile. The other two stay in the prototype, reachable by a direct
+   ?skillId= link only. */
+const LAUNCH_SKILLS=new Set([
+  "rudiment.single-stroke-roll.core",
+  "rudiment.double-stroke-roll.core",
+  "rudiment.single-paradiddle.core"
+]);
+const NAV=SKILLS.map((c,i)=>i).filter(i=>LAUNCH_SKILLS.has(SKILLS[i].skillId));
 
 /* Question bank: 4 handwritten questions per skill. m() marks sticking options monospace. */
 const m=t=>({t,mono:true});
@@ -334,8 +343,12 @@ function renderCard(){
   $("#receiptZone").innerHTML="";
   renderStage(); renderProfile();
 }
-$("#prevCard").addEventListener("click",()=>{ quiz=null; S.cardIdx=(S.cardIdx-1+SKILLS.length)%SKILLS.length; save(); renderCard(); });
-$("#nextCard").addEventListener("click",()=>{ quiz=null; S.cardIdx=(S.cardIdx+1)%SKILLS.length; save(); renderCard(); });
+function stepCard(dir){
+  let pos=NAV.indexOf(S.cardIdx); if(pos<0) pos=0;
+  S.cardIdx=NAV[(pos+dir+NAV.length)%NAV.length]; save(); renderCard();
+}
+$("#prevCard").addEventListener("click",()=>{ quiz=null; stepCard(-1); });
+$("#nextCard").addEventListener("click",()=>{ quiz=null; stepCard(1); });
 
 function renderStage(){
   const st=$("#stageState"), hint=$("#stageHint"), cnt=$("#stageCount");
@@ -413,6 +426,7 @@ function buildResult(q,sc){
     scoringRuleVersion:ACTIVITY.scoringRuleVersion,
     attemptId:"att_"+Date.now().toString(36)+Math.random().toString(36).slice(2,6),
     skillId:c.skillId, skillVersion:1,
+    assignmentId:LAUNCH.assignmentId||undefined, sessionId:LAUNCH.sessionId||undefined,
     mode:"quiz", inputSource:"pointer",
     deviceTest:{status:"not-applicable"},      // non-controller activity
     evidence:[
@@ -488,7 +502,7 @@ function latestBySkill(attempts,skillId){
 function renderProfile(){
   let sib=null;
   try{const raw=localStorage.getItem(SIBLING_LS_KEY); if(raw) sib=JSON.parse(raw);}catch(e){}
-  $("#profGrid").innerHTML=SKILLS.map(s=>{
+  $("#profGrid").innerHTML=SKILLS.filter(s=>LAUNCH_SKILLS.has(s.skillId)).map(s=>{
     const quizA=latestBySkill(S.attempts,s.skillId);
     const trigA=latestBySkill(sib&&sib.attempts,s.skillId);
     const earned=sib&&sib.earned&&sib.earned[s.skillId];
@@ -527,14 +541,28 @@ $("#resetAll").addEventListener("click",()=>{
   }
 });
 
-/* Launch-contract stub — same shape as the trigger app: ?skillId=… preselects */
+/* Launch contract praxis.launch.v0_1: ?skillId (required) + optional
+   mode / contract / returnTo / assignmentId / sessionId. Unknown skillId shows a
+   readable error instead of silently selecting another skill (doc 16). */
+let LAUNCH={};
 (function(){
   const q=new URLSearchParams(location.search);
-  const sk=q.get("skillId");
-  if(sk){ const i=SKILLS.findIndex(c=>c.skillId===sk); if(i>=0) S.cardIdx=i; }
+  LAUNCH={ skillId:q.get("skillId"), mode:q.get("mode"), contract:q.get("contract"),
+           returnTo:q.get("returnTo"), assignmentId:q.get("assignmentId"), sessionId:q.get("sessionId") };
+  if(LAUNCH.skillId){
+    const i=SKILLS.findIndex(c=>c.skillId===LAUNCH.skillId);
+    if(i>=0) S.cardIdx=i;
+    else LAUNCH.error=`Unknown skill “${LAUNCH.skillId}” — this launch link may be out of date.`;
+  }
 })();
 
 /* ---------------- Boot ---------------- */
+if(LAUNCH.error){
+  const b=document.createElement("div");
+  b.style.cssText="margin:0 0 16px;padding:11px 14px;border:1px solid var(--orange);border-radius:10px;background:#241203;color:#ffc79d;font-size:13px";
+  b.innerHTML="⚠ "+LAUNCH.error+(LAUNCH.returnTo?` <a href="${LAUNCH.returnTo}" style="color:var(--cobalt)">Go back</a>`:"");
+  document.querySelector(".wrap").insertBefore(b,document.querySelector(".grid"));
+}
 renderCard();
 </script>
 </body>

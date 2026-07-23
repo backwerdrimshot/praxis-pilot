@@ -327,6 +327,15 @@ const DECK=[
    pattern:"RLRRLLRLRRLL", group:6,
    desc:"Paradiddle plus one more diddle. Six notes — and the lead hand does NOT alternate."},
 ];
+/* v0.1 scope lock (doc 16): only these three skills appear in the prev/next launch
+   nav. The other two remain in the prototype and are still reachable by a direct
+   ?skillId= link, but are hidden from the launch rotation. */
+const LAUNCH_SKILLS=new Set([
+  "rudiment.single-stroke-roll.core",
+  "rudiment.double-stroke-roll.core",
+  "rudiment.single-paradiddle.core"
+]);
+const NAV=DECK.map((c,i)=>i).filter(i=>LAUNCH_SKILLS.has(DECK[i].skillId));
 
 /* ---------------- Persistent state ---------------- */
 const LS_KEY="praxis.cts.v1";
@@ -566,8 +575,12 @@ function setMode(m){
 }
 $("#modePractice").addEventListener("click",()=>setMode("practice"));
 $("#modeChallenge").addEventListener("click",()=>setMode("challenge"));
-$("#prevCard").addEventListener("click",()=>{ if(round)cancelRound(); S.cardIdx=(S.cardIdx-1+DECK.length)%DECK.length; save(); renderCard(); });
-$("#nextCard").addEventListener("click",()=>{ if(round)cancelRound(); S.cardIdx=(S.cardIdx+1)%DECK.length; save(); renderCard(); });
+function stepCard(dir){
+  let pos=NAV.indexOf(S.cardIdx); if(pos<0) pos=0;   // off-nav (direct skillId) → re-enter launch rotation
+  S.cardIdx=NAV[(pos+dir+NAV.length)%NAV.length]; save(); renderCard();
+}
+$("#prevCard").addEventListener("click",()=>{ if(round)cancelRound(); stepCard(-1); });
+$("#nextCard").addEventListener("click",()=>{ if(round)cancelRound(); stepCard(1); });
 
 function renderCard(){
   const c=card();
@@ -639,11 +652,10 @@ function renderStage(){
 $("#startBtn").addEventListener("click",startRound);
 function startRound(){
   ac();
-  if(mode==="challenge"&&!relValid()){
-    toast("Run the reliability test first — Challenge results should be trustworthy",true);
-    $("#relStart").scrollIntoView({behavior:"smooth",block:"center"});
-    return;
-  }
+  // doc 16: a challenge without a valid reliability test still runs, but its A2
+  // result is non-qualifying (cannot earn the card / reach pass-off readiness).
+  if(mode==="challenge"&&!relValid())
+    toast("No current reliability test — this round runs but won't count until you test",true);
   focusLossFlag=false;
   round={phase:mode==="challenge"?"preview":"entry",entered:[],errors:0,clears:0,
     startedAt:new Date().toISOString(),previewLeft:5,sources:new Set()};
@@ -732,10 +744,12 @@ function submitEntry(){
   // store attempt (summary evidence only — no raw keystroke stream)
   S.attempts.push(result); if(S.attempts.length>50) S.attempts=S.attempts.slice(-50);
   let newCard=false;
-  if(sc.exact&&!S.earned[card().skillId]){ S.earned[card().skillId]=new Date().toISOString(); newCard=true; }
+  const qualifying=sc.exact&&relValid();   // clean AND reliability-verified
+  if(qualifying&&!S.earned[card().skillId]){ S.earned[card().skillId]=new Date().toISOString(); newCard=true; }
   save();
   renderStage(); renderCollection();
-  if(sc.exact){ sndWin(); $("#bigMsg").textContent="Clean round ✓"; $("#bigMsg").className="bigmsg ok"; }
+  if(qualifying){ sndWin(); $("#bigMsg").textContent="Clean round ✓"; $("#bigMsg").className="bigmsg ok"; }
+  else if(sc.exact){ sndWin(); $("#bigMsg").textContent="Clean round — but not counted: run the reliability test to make it qualify"; $("#bigMsg").className="bigmsg warn"; }
   else { sndErr(); $("#bigMsg").textContent="Not quite — see the receipt"; $("#bigMsg").className="bigmsg warn"; }
   renderReceipt(result,sc,r,newCard);
 }
@@ -744,6 +758,7 @@ function buildResult(r,sc,roundMode){
   const c=card(), src=inputSourceOf(r.sources);
   const validity=[];
   if(roundMode==="practice") validity.push("formative-practice: pattern visible during entry; not stored");
+  if(roundMode==="challenge"&&!relValid()) validity.push("reliability test not passed — A2 result is not qualifying for pass-off");
   if(r.clears) validity.push(`entry cleared ${r.clears}× before submit`);
   if(focusLossFlag) validity.push("window lost focus during the round");
   const deviceTest=relValid()
@@ -755,6 +770,7 @@ function buildResult(r,sc,roundMode){
     scoringRuleVersion:ACTIVITY.scoringRuleVersion,
     attemptId:"att_"+Date.now().toString(36)+Math.random().toString(36).slice(2,6),
     skillId:c.skillId, skillVersion:1,
+    assignmentId:LAUNCH.assignmentId||undefined, sessionId:LAUNCH.sessionId||undefined,
     mode:roundMode, inputSource:src, deviceTest,
     evidence:[
       { evidenceType:"A1_ANSWER_CORRECTNESS",
@@ -848,7 +864,7 @@ function renderReceipt(result,sc,r,newCard){
 
 /* ---------------- Collection ---------------- */
 function renderCollection(){
-  $("#collGrid").innerHTML=DECK.map(c=>{
+  $("#collGrid").innerHTML=DECK.filter(c=>LAUNCH_SKILLS.has(c.skillId)).map(c=>{
     const e=S.earned[c.skillId];
     return `<div class="ccard ${e?"earned":""}">
       <div class="nm">${e?"★ ":""}${c.title}</div>
@@ -874,15 +890,30 @@ $("#resetAll").addEventListener("click",()=>{
   }
 });
 
-/* Launch-contract stub (doc 14e direction): ?skillId=…&mode=… preselects the activity */
+/* Launch contract praxis.launch.v0_1: ?skillId (required) + optional
+   mode / contract / returnTo / assignmentId / sessionId. Unsupported params are
+   ignored safely; an unknown skillId shows a readable error instead of silently
+   selecting a different skill (doc 16). */
+let LAUNCH={};
 (function(){
   const q=new URLSearchParams(location.search);
-  const sk=q.get("skillId"); const m=q.get("mode");
-  if(sk){ const i=DECK.findIndex(c=>c.skillId===sk); if(i>=0) S.cardIdx=i; }
-  if(m==="challenge"||m==="practice") mode=m;
+  LAUNCH={ skillId:q.get("skillId"), mode:q.get("mode"), contract:q.get("contract"),
+           returnTo:q.get("returnTo"), assignmentId:q.get("assignmentId"), sessionId:q.get("sessionId") };
+  if(LAUNCH.skillId){
+    const i=DECK.findIndex(c=>c.skillId===LAUNCH.skillId);
+    if(i>=0) S.cardIdx=i;
+    else LAUNCH.error=`Unknown skill “${LAUNCH.skillId}” — this launch link may be out of date.`;
+  }
+  if(LAUNCH.mode==="challenge"||LAUNCH.mode==="practice") mode=LAUNCH.mode;
 })();
 
 /* ---------------- Boot ---------------- */
+if(LAUNCH.error){
+  const b=document.createElement("div");
+  b.style.cssText="margin:0 0 16px;padding:11px 14px;border:1px solid var(--orange);border-radius:10px;background:#241203;color:#ffc79d;font-size:13px";
+  b.innerHTML="⚠ "+LAUNCH.error+(LAUNCH.returnTo?` <a href="${LAUNCH.returnTo}" style="color:var(--cobalt)">Go back</a>`:"");
+  document.querySelector(".wrap").insertBefore(b,document.querySelector(".grid"));
+}
 renderBindings(); renderRelTarget(); renderCard();
 setMode(mode);
 </script>
