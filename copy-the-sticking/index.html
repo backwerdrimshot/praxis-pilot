@@ -296,6 +296,7 @@
 </div>
 <div class="toast" id="toast"></div>
 
+<script src="../shared/praxis-input.js"></script>
 <script>
 /* =====================================================================
    Copy the Sticking — Stick Lab two-trigger MVP
@@ -359,101 +360,60 @@ const sndErr=()=>blip(140,0.12,"square",0.12);
 const sndWin=()=>{blip(523.25,.09);setTimeout(()=>blip(659.25,.09),90);setTimeout(()=>blip(783.99,.14),180);};
 
 /* =====================================================================
-   Input manager (doc 13): map ACTIONS not devices.
-   Emits TriggerEvent {source, action, controlId, timestampMs, pressed}.
-   Keyboard adapter binds by KeyboardEvent.code; touch adapter = pads.
+   Input layer — shared PraxisInput manager (../shared/praxis-input.js,
+   doc 13 Phase 1). Games consume actions; adapters live in the module.
+   This app remains the owner of persistence (bindings live in S).
    ===================================================================== */
-const RESERVED=new Set(["Tab","Escape","Enter","NumpadEnter","Space","Backspace","CapsLock","ContextMenu",
-  "MetaLeft","MetaRight","ControlLeft","ControlRight","AltLeft","AltRight","OSLeft","OSRight",
-  "F1","F2","F3","F4","F5","F6","F7","F8","F9","F10","F11","F12","PrintScreen","Delete"]);
-const pressedCodes=new Set();
-const lastDownAt={};           // controlId -> perf ts (refractory / bounce detection)
-let bounceCount=0;             // bounces observed since last reset (reliability test reads this)
-let listeners=[];              // trigger event consumers
-function onTrigger(fn){listeners.push(fn);}
-function emitTrigger(ev){ flashPad(ev.action); listeners.forEach(fn=>fn(ev)); }
-
-function bindingsSig(){ return ["L","R"].map(h=>S.bindings[h].map(b=>b?b.code:"·").join("+")).join("/"); }
-/* Bind by physical KeyboardEvent.code; some synthetic keyboards/IMEs send an
-   empty code, so fall back to the key label only in that case. */
-function effCode(e){ return e.code||("key:"+(e.key||"").toLowerCase()); }
-function eventToAction(e){
-  const code=effCode(e), lbl=keyLabel(e).toLowerCase();
-  for(const h of ["L","R"]) for(const b of S.bindings[h])
-    if(b&&(b.code===code||(!e.code&&b.label.toLowerCase()===lbl)))
-      return h==="L"?"LEFT_HAND":"RIGHT_HAND";
-  return null;
-}
-function keyLabel(e){
-  if(e.key===" ")return "Space";
-  return e.key.length===1?e.key.toUpperCase():e.key;
-}
-function isTextTarget(t){ return t&&(t.tagName==="INPUT"||t.tagName==="TEXTAREA"||t.isContentEditable); }
-
-/* --- key capture for remapping --- */
-let captureSlot=null; // "L0","L1","R0","R1"
-function beginCapture(slot){
-  captureSlot=slot;
-  const hand=slot[0]==="L"?"Left":"Right", which=slot[1]==="0"?"primary":"backup";
-  $("#captureBar").classList.add("show");
-  $("#captureBar").textContent=`Press a key for ${hand} hand (${which})… Esc to cancel.`;
-}
-function endCapture(msg,warn){
-  captureSlot=null; $("#captureBar").classList.remove("show");
-  if(msg) toast(msg,warn);
-}
-
-let activeSurface=null; // null | "round" | "reltest"  — capture mapped keys only while active (doc 13)
-document.addEventListener("keydown",e=>{
-  // 1. remap capture has first claim on the next key
-  if(captureSlot){
-    e.preventDefault();
-    if(e.code==="Escape"||e.key==="Escape"){ endCapture("Remap cancelled",true); return; }
-    if(RESERVED.has(e.code)||RESERVED.has(keyLabel(e))){ endCapture(`${keyLabel(e)} is a browser/system key — pick another`,true); return; }
-    const taken=["L","R"].some(h=>S.bindings[h].some(b=>b&&b.code===effCode(e)));
-    if(taken){ endCapture(`${keyLabel(e)} is already bound — pick another`,true); return; }
-    const h=captureSlot[0], i=+captureSlot[1];
-    S.bindings[h][i]={code:effCode(e),label:keyLabel(e)};
-    invalidateRelTestIfChanged(); save(); renderBindings();
-    endCapture(`${h==="L"?"Left":"Right"} ${i===0?"primary":"backup"} → ${keyLabel(e)}`);
-    return;
-  }
-  if(isTextTarget(e.target)) return;              // never swallow typing in a text field
-  // 2. UI action keys during an active round
-  if(activeSurface==="round"&&round&&round.phase==="entry"){
-    if(e.code==="Space"||e.key===" "){ e.preventDefault(); if(!e.repeat) submitEntry(); return; }
-  }
-  if((e.code==="Escape"||e.key==="Escape")&&activeSurface==="round"){ cancelRound(); return; }
-  // 3. mapped trigger keys
-  const action=eventToAction(e);
-  if(!action) return;
-  if(activeSurface) e.preventDefault();           // prevent browser behavior only for active mapped keys
-  if(e.repeat) return;                            // held key must not generate answers
-  const code=effCode(e), now=performance.now();
-  if(now-(lastDownAt[code]??-1e9)<S.refractoryMs){ bounceCount++; return; }
-  lastDownAt[code]=now;
-  if(pressedCodes.has(code)) return;
-  pressedCodes.add(code);
-  emitTrigger({source:"keyboard",action,controlId:code,timestampMs:now,value:1,pressed:true});
-});
-document.addEventListener("keyup",e=>{ pressedCodes.delete(effCode(e)); });
+let activeSurface=null;        // null | "round" | "reltest" (mirrored into IM)
 let focusLossFlag=false;
-function clearStuck(){ pressedCodes.clear();
-  if(activeSurface){ focusLossFlag=true; toast("Focus lost — inputs reset, keep going",true); } }
-window.addEventListener("blur",clearStuck);
-document.addEventListener("visibilitychange",()=>{ if(document.hidden) clearStuck(); });
+let listeners=[];              // trigger event consumers (rel test + rounds)
+function onTrigger(fn){listeners.push(fn);}
+function setSurface(s){ activeSurface=s; IM.setActiveSurface(s); }
+
+const IM=PraxisInput.create({
+  bindings:S.bindings,
+  refractoryMs:S.refractoryMs,
+  onTrigger(ev){ flashPad(ev.action); listeners.forEach(fn=>fn(ev)); },
+  onBindingsChange(){
+    S.bindings=IM.getBindings();
+    invalidateRelTestIfChanged(); save(); renderBindings();
+  },
+  onCaptureChange(info){
+    const bar=$("#captureBar");
+    if(info.state==="capturing"){
+      bar.classList.add("show");
+      bar.textContent=`Press a key for ${info.hand==="L"?"Left":"Right"} hand (${info.index===0?"primary":"backup"})… Esc to cancel.`;
+      return;
+    }
+    bar.classList.remove("show");
+    if(info.state==="cancelled") toast("Remap cancelled",true);
+    else if(info.state==="rejected") toast(info.reason==="reserved"
+      ?`${info.label} is a browser/system key — pick another`
+      :`${info.label} is already bound — pick another`,true);
+    else if(info.state==="done") toast(`${info.hand==="L"?"Left":"Right"} ${info.index===0?"primary":"backup"} → ${info.label}`);
+  },
+  onFocusLoss(){ focusLossFlag=true; toast("Focus lost — inputs reset, keep going",true); }
+});
+IM.attach();
+
+/* UI action keys (Space=submit, Esc=cancel) stay app-side; registered after
+   IM.attach() so an active remap capture consumes the key first. */
+document.addEventListener("keydown",e=>{
+  if(IM.isCapturing()) return;
+  if(PraxisInput.isTextTarget(e.target)) return;
+  if(activeSurface==="round"&&round&&round.phase==="entry"&&(e.code==="Space"||e.key===" ")){
+    e.preventDefault(); if(!e.repeat) submitEntry(); return;
+  }
+  if((e.code==="Escape"||e.key==="Escape")&&activeSurface==="round") cancelRound();
+});
 
 /* --- touch/pointer adapter: on-screen pads --- */
-function padDown(hand,el){
-  const now=performance.now(), id="pad"+hand;
-  ac(); // unlock audio on first gesture
-  if(now-(lastDownAt[id]??-1e9)<S.refractoryMs){ bounceCount++; return; }
-  lastDownAt[id]=now;
-  emitTrigger({source:"touch",action:hand==="L"?"LEFT_HAND":"RIGHT_HAND",controlId:id,timestampMs:now,value:1,pressed:true});
-}
 ["L","R"].forEach(h=>{
   const el=$("#pad"+h);
-  el.addEventListener("pointerdown",e=>{e.preventDefault();padDown(h,el);});
+  el.addEventListener("pointerdown",e=>{
+    e.preventDefault(); ac(); // unlock audio on first gesture
+    IM.press(h==="L"?"LEFT_HAND":"RIGHT_HAND","touch","pad"+h);
+  });
 });
 function flashPad(action){
   const h=action==="LEFT_HAND"?"L":action==="RIGHT_HAND"?"R":null; if(!h) return;
@@ -477,22 +437,23 @@ function renderBindings(){
   $("#refractory").value=S.refractoryMs;
   renderRelPill();
 }
-document.querySelectorAll("[data-cap]").forEach(b=>b.addEventListener("click",()=>beginCapture(b.dataset.cap)));
+document.querySelectorAll("[data-cap]").forEach(b=>b.addEventListener("click",()=>IM.beginCapture(b.dataset.cap)));
 document.querySelectorAll("[data-clr]").forEach(b=>b.addEventListener("click",()=>{
-  const h=b.dataset.clr[0], i=+b.dataset.clr[1];
-  S.bindings[h][i]=null; invalidateRelTestIfChanged(); save(); renderBindings();
+  IM.clearBinding(b.dataset.clr[0],+b.dataset.clr[1]);
 }));
 $("#resetBinds").addEventListener("click",()=>{
-  S.bindings=defaultState().bindings; S.refractoryMs=25;
-  invalidateRelTestIfChanged(); save(); renderBindings(); toast("Bindings reset to F / J");
+  S.refractoryMs=25; IM.setRefractory(25);
+  IM.setBindings(PraxisInput.defaultBindings());
+  toast("Bindings reset to F / J");
 });
 $("#refractory").addEventListener("change",e=>{
-  S.refractoryMs=Math.max(0,Math.min(200,+e.target.value||0)); save(); renderBindings();
+  S.refractoryMs=Math.max(0,Math.min(200,+e.target.value||0));
+  IM.setRefractory(S.refractoryMs); save(); renderBindings();
 });
 function invalidateRelTestIfChanged(){
-  if(S.relTest&&S.relTest.sig!==bindingsSig()){ S.relTest=null; }
+  if(S.relTest&&S.relTest.sig!==IM.bindingsSig()){ S.relTest=null; }
 }
-function relValid(){ return S.relTest&&S.relTest.passed&&S.relTest.sig===bindingsSig(); }
+function relValid(){ return S.relTest&&S.relTest.passed&&S.relTest.sig===IM.bindingsSig(); }
 function renderRelPill(){
   const p=$("#relPill");
   if(relValid()){ p.className="pill ok"; p.textContent="✓ Inputs tested"; }
@@ -520,8 +481,8 @@ function renderRelTarget(){
 }
 $("#relStart").addEventListener("click",()=>{
   ac();
-  rel={hits:[],times:[],simultaneous:0,startBounce:bounceCount,lastHand:{}};
-  activeSurface="reltest"; focusLossFlag=false;
+  rel={hits:[],times:[],simultaneous:0,startBounce:IM.getBounceCount(),lastHand:{}};
+  setSurface("reltest"); focusLossFlag=false;
   $("#relReport").classList.remove("show");
   $("#relStart").textContent="Testing… press "+REL_SEQ.length+" alternating";
   $("#relStart").disabled=true; $("#relFinish").style.display="";
@@ -548,7 +509,7 @@ function finishRel(){
   const detR=rel.hits.filter(h=>h.hand==="R").length;
   const missL=Math.max(0,5-detL), missR=Math.max(0,5-detR);
   const wrongOrder=rel.hits.filter(h=>!h.ok).length;
-  const bounced=bounceCount-rel.startBounce;
+  const bounced=IM.getBounceCount()-rel.startBounce;
   const iv=[]; for(let i=1;i<rel.times.length;i++) iv.push(rel.times[i]-rel.times[i-1]);
   const med=iv.length?[...iv].sort((a,b)=>a-b)[Math.floor(iv.length/2)]:0;
   const avg=iv.length?Math.round(iv.reduce((a,b)=>a+b,0)/iv.length):0;
@@ -558,7 +519,7 @@ function finishRel(){
   const summary={detected:{L:detL,R:detR},missed:{L:missL,R:missR},wrongOrder,bounced,
     simultaneous:rel.simultaneous,avgIntervalMs:avg,intervalOutliers:outliers,
     focusLost:focusLossFlag,source:touchUsed?"touch/mixed":"keyboard"};
-  S.relTest={at:new Date().toISOString(),sig:bindingsSig(),passed,summary};
+  S.relTest={at:new Date().toISOString(),sig:IM.bindingsSig(),passed,summary};
   save(); renderRelPill();
   const rep=$("#relReport");
   rep.innerHTML=`
@@ -576,11 +537,11 @@ function finishRel(){
       <button class="small ghost" id="relPads">Use on-screen pads</button>
       <button class="small ghost" id="relRetry">Test again</button></div>`}`;
   rep.classList.add("show");
-  rel=null; activeSurface=null;
+  rel=null; setSurface(null);
   $("#relStart").textContent="Run test"; $("#relStart").disabled=false; $("#relFinish").style.display="none";
   renderRelTarget();
   if(!passed){
-    $("#relRemap")?.addEventListener("click",()=>beginCapture("L0"));
+    $("#relRemap")?.addEventListener("click",()=>IM.beginCapture("L0"));
     $("#relPads")?.addEventListener("click",()=>{toast("Pads always work — tap L / R below the card"); });
     $("#relRetry")?.addEventListener("click",()=>$("#relStart").click());
   } else toast("Reliability test passed");
@@ -686,7 +647,7 @@ function startRound(){
   focusLossFlag=false;
   round={phase:mode==="challenge"?"preview":"entry",entered:[],errors:0,clears:0,
     startedAt:new Date().toISOString(),previewLeft:5,sources:new Set()};
-  activeSurface="round";
+  setSurface("round");
   $("#receiptZone").innerHTML="";
   if(round.phase==="preview"){
     renderStage();
@@ -700,7 +661,7 @@ function startRound(){
 }
 function cancelRound(){
   if(round&&round.previewTimer) clearInterval(round.previewTimer);
-  round=null; activeSurface=null; renderStage();
+  round=null; setSurface(null); renderStage();
 }
 $("#cancelBtn").addEventListener("click",cancelRound);
 $("#clearBtn").addEventListener("click",()=>{
@@ -757,7 +718,7 @@ function finishPractice(){
   const sc=scoreEntry(pat(),round.entered);
   sc.practiceErrors=round.errors;
   sndWin();
-  const r=round; round=null; activeSurface=null;
+  const r=round; round=null; setSurface(null);
   renderStage();
   $("#bigMsg").textContent=`Done — ${sc.expected} strokes, ${r.errors} wrong press${r.errors===1?"":"es"} along the way`;
   $("#bigMsg").className="bigmsg ok";
@@ -766,7 +727,7 @@ function finishPractice(){
 function submitEntry(){
   if(!round||round.phase!=="entry"||mode!=="challenge") return;
   const sc=scoreEntry(pat(),round.entered);
-  const r=round; round=null; activeSurface=null;
+  const r=round; round=null; setSurface(null);
   const result=buildResult(r,sc,"challenge");
   // store attempt (summary evidence only — no raw keystroke stream)
   S.attempts.push(result); if(S.attempts.length>50) S.attempts=S.attempts.slice(-50);
@@ -905,7 +866,9 @@ function toast(msg,warn){
 }
 $("#resetAll").addEventListener("click",()=>{
   if(confirm("Reset everything stored by this prototype (bindings, test results, earned cards, attempts)?")){
-    S=defaultState(); save(); renderBindings(); renderCard(); renderRelTarget();
+    S=defaultState(); save();
+    IM.setRefractory(S.refractoryMs); IM.setBindings(S.bindings);
+    renderCard(); renderRelTarget();
     $("#relReport").classList.remove("show");
     toast("All local data reset");
   }
