@@ -20,10 +20,11 @@
   .wrap{max-width:940px;margin:0 auto;padding:22px 18px 60px;}
   header.top{display:flex;align-items:center;gap:14px;flex-wrap:wrap;
     padding:12px 4px 18px;border-bottom:1px solid var(--line);margin-bottom:20px;}
-  .brand .logo{font-weight:800;letter-spacing:.5px;font-size:21px}
+  .brand .logo{margin:0;font-weight:800;letter-spacing:.5px;font-size:21px}
   .brand .logo .dot{color:var(--cobalt)}
   .brand .deck{color:var(--muted);font-size:13px;margin-top:2px}
   .stats{margin-left:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .pill a{display:inline-block;padding:6px 12px;margin:-6px -12px;text-decoration:none;border-radius:999px}
   .pill{background:var(--panel);border:1px solid var(--line);border-radius:999px;
     padding:6px 12px;font-size:12.5px;display:flex;align-items:center;gap:7px;white-space:nowrap}
 
@@ -76,14 +77,22 @@
     font-size:12.5px;color:var(--muted);line-height:1.6;margin-top:22px}
   .boundary b{color:var(--ink)}
   footer{margin-top:24px;color:var(--muted);font-size:11.5px;text-align:center;line-height:1.6}
-  .foot-reset{background:none;border:none;color:var(--cobalt);cursor:pointer;font-size:11.5px;padding:0;text-decoration:underline}
+  .foot-reset{background:none;border:none;color:var(--cobalt);cursor:pointer;font-size:11.5px;
+    padding:5px 3px;min-height:24px;text-decoration:underline}
+
+  /* Respect a reduced-motion preference (WCAG 2.3.3): a student with vestibular
+     sensitivity or migraine triggers needs an option that isn't "don't use the app". */
+  @media (prefers-reduced-motion: reduce){
+    *,*::before,*::after{animation-duration:.001ms !important;animation-iteration-count:1 !important;
+      transition-duration:.001ms !important;scroll-behavior:auto !important}
+  }
 </style>
 </head>
 <body>
 <div class="wrap">
   <header class="top">
     <div class="brand">
-      <div class="logo">Praxis pilot<span class="dot">.</span></div>
+      <h1 class="logo">Praxis pilot<span class="dot">.</span></h1>
       <div class="deck">One skill · evidence from two apps · one profile</div>
     </div>
     <div class="stats">
@@ -91,6 +100,8 @@
       <div class="pill" id="ledgerPill">— results</div>
     </div>
   </header>
+
+  <main>
 
   <p class="intro">Each rudiment below is <b>one skill</b>. You build evidence for it in two places — a
     <b>knowledge check</b> (Count It) and a <b>trigger challenge</b> (Copy the Sticking) — and this page
@@ -104,6 +115,8 @@
     pattern recall, and controller-sequence accuracy — the trigger evidence a browser can measure. It does
     <b>not</b> claim you physically played the rudiment: grip, stroke, rebound, sound, and musical execution
     are a <b>teacher pass-off</b>, shown here only as pending. Nothing leaves this device.</div>
+
+  </main>
 
   <footer>
     Praxis pilot v0.1 · Backwerd Rhythm Shop · doc 16 build brief.<br>

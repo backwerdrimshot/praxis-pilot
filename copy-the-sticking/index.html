@@ -21,7 +21,7 @@
   header.top{display:flex;align-items:center;gap:14px;flex-wrap:wrap;
     padding:12px 4px 18px;border-bottom:1px solid var(--line);margin-bottom:20px;}
   .brand{display:flex;align-items:baseline;gap:10px}
-  .brand .logo{font-weight:800;letter-spacing:.5px;font-size:20px}
+  .brand .logo{margin:0;font-weight:800;letter-spacing:.5px;font-size:20px}
   .brand .logo .dot{color:var(--purple)}
   .brand .deck{color:var(--muted);font-size:13px}
   .stats{margin-left:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
@@ -175,20 +175,30 @@
   .ccard.earned .st{color:var(--purple)}
 
   footer{margin-top:26px;color:var(--muted);font-size:11.5px;text-align:center;line-height:1.6}
-  .foot-reset{background:none;border:none;color:var(--cobalt);cursor:pointer;font-size:11.5px;padding:0;text-decoration:underline}
+  .foot-reset{background:none;border:none;color:var(--cobalt);cursor:pointer;font-size:11.5px;
+    padding:5px 3px;min-height:24px;text-decoration:underline}
 
   .toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(30px);
     background:var(--green);color:#062018;font-weight:700;padding:12px 18px;border-radius:12px;
     box-shadow:var(--shadow);opacity:0;transition:.3s;pointer-events:none;z-index:20;font-size:14px}
   .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
   .toast.warn{background:var(--orange);color:#241203}
+
+  /* Respect a reduced-motion preference (WCAG 2.3.3). This app is the one that
+     matters most: it flashes the pattern preview and pad feedback, and a student
+     with vestibular sensitivity or migraine triggers needs an option that isn't
+     "don't use the app". */
+  @media (prefers-reduced-motion: reduce){
+    *,*::before,*::after{animation-duration:.001ms !important;animation-iteration-count:1 !important;
+      transition-duration:.001ms !important;scroll-behavior:auto !important}
+  }
 </style>
 </head>
 <body>
 <div class="wrap">
   <header class="top">
     <div class="brand">
-      <div class="logo">Copy the Sticking<span class="dot">.</span></div>
+      <h1 class="logo">Copy the Sticking<span class="dot">.</span></h1>
       <div class="deck">Stick Lab · two-trigger MVP</div>
     </div>
     <div class="stats">
@@ -196,6 +206,8 @@
       <div class="pill warn" id="relPill">Inputs not tested</div>
     </div>
   </header>
+
+  <main>
 
   <div class="grid">
     <!-- ============ LEFT: game ============ -->
@@ -288,6 +300,8 @@
       </div>
     </section>
   </div>
+
+  </main>
 
   <footer>
     Prototype · part of the Backwerd Rhythm Shop app family · the Stick Lab controller pilot for <b>Praxis</b> (Notion docs 13 / 14d).<br>

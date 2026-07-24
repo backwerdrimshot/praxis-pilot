@@ -19,18 +19,18 @@
   .wrap{max-width:940px;margin:0 auto;padding:22px 18px 60px;}
   header.top{display:flex;align-items:center;gap:14px;flex-wrap:wrap;
     padding:12px 4px 18px;border-bottom:1px solid var(--line);margin-bottom:20px;}
-  .brand .logo{font-weight:800;letter-spacing:.5px;font-size:21px}
+  .brand .logo{margin:0;font-weight:800;letter-spacing:.5px;font-size:21px}
   .brand .logo .dot{color:var(--pink)}
   .brand .deck{color:var(--muted);font-size:13px;margin-top:2px}
   .stats{margin-left:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
   .pill{background:var(--panel);border:1px solid var(--line);border-radius:999px;
     padding:6px 12px;font-size:12.5px;white-space:nowrap}
-  .pill a{text-decoration:none}
+  .pill a{display:inline-block;padding:6px 12px;margin:-6px -12px;text-decoration:none;border-radius:999px}
 
   .intro{color:var(--muted);font-size:13.5px;line-height:1.6;margin:0 0 20px;max-width:78ch}
   .intro b{color:var(--ink)}
 
-  h3.sec{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin:24px 0 10px}
+  h2.sec{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin:24px 0 10px}
   .queue{display:flex;flex-direction:column;gap:16px}
   .empty{color:var(--muted);font-size:13.5px;background:var(--panel);border:1px dashed var(--line);
     border-radius:12px;padding:16px}
@@ -39,7 +39,7 @@
     border-radius:16px;box-shadow:var(--shadow);padding:18px 20px}
   .card.verified{border-color:#4c4370}
   .card .head{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
-  .card h2{margin:0;font-size:18px}
+  .card h3{margin:0;font-size:18px}
   .card .sid{margin-left:auto;font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace;font-size:11px;color:var(--muted)}
   .card .pat{font-family:"SF Mono",ui-monospace,Menlo,monospace;letter-spacing:2px;color:var(--muted);font-size:12.5px;margin:6px 0 12px}
 
@@ -76,18 +76,26 @@
   .decided button.undo{border:none;background:none;color:var(--cobalt);text-decoration:underline;padding:0;font-weight:500;font-size:12px}
 
   footer{margin-top:26px;color:var(--muted);font-size:11.5px;text-align:center;line-height:1.6}
-  .foot-reset{background:none;border:none;color:var(--cobalt);cursor:pointer;font-size:11.5px;padding:0;text-decoration:underline}
+  .foot-reset{background:none;border:none;color:var(--cobalt);cursor:pointer;font-size:11.5px;
+    padding:5px 3px;min-height:24px;text-decoration:underline}
   .toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(30px);
     background:var(--green);color:#062018;font-weight:700;padding:12px 18px;border-radius:12px;
     box-shadow:var(--shadow);opacity:0;transition:.3s;pointer-events:none;z-index:20;font-size:14px}
   .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+  /* Respect a reduced-motion preference (WCAG 2.3.3): a student with vestibular
+     sensitivity or migraine triggers needs an option that isn't "don't use the app". */
+  @media (prefers-reduced-motion: reduce){
+    *,*::before,*::after{animation-duration:.001ms !important;animation-iteration-count:1 !important;
+      transition-duration:.001ms !important;scroll-behavior:auto !important}
+  }
 </style>
 </head>
 <body>
 <div class="wrap">
   <header class="top">
     <div class="brand">
-      <div class="logo">Teacher pass-off<span class="dot">.</span></div>
+      <h1 class="logo">Teacher pass-off<span class="dot">.</span></h1>
       <div class="deck">Praxis pilot · local demo view</div>
     </div>
     <div class="stats">
@@ -95,21 +103,23 @@
     </div>
   </header>
 
+  <main>
+
   <p class="intro">This is the <b>teacher side</b> of the pilot. Praxis places a student in your queue only
     when the <b>digital prerequisites</b> are met (knowledge + a clean, reliability-verified controller round).
     Your job is the part a computer can't judge: <b>the actual playing</b>. Record a decision and it flows
     back to the student's home page. This is a local demo — no accounts, no student data leaves this device.</p>
 
-  <h3 class="sec">Ready for your pass-off</h3>
+  <h2 class="sec">Ready for your pass-off</h2>
   <div class="queue" id="queue"></div>
 
-  <h3 class="sec">Recorded</h3>
+  <h2 class="sec">Recorded</h2>
   <div class="queue" id="decided"></div>
 
-  <h3 class="sec">Not ready yet</h3>
+  <h2 class="sec">Not ready yet</h2>
   <div class="queue" id="waiting"></div>
 
-  <h3 class="sec">Collect the data</h3>
+  <h2 class="sec">Collect the data</h2>
   <div class="card">
     <div class="actions">
       <button id="expJson">⬇ This learner (JSON)</button>
@@ -117,6 +127,8 @@
     </div>
     <div class="rubric" style="margin-top:12px;margin-bottom:0">The <b>JSON</b> is the current learner's full record (results, pass-offs, device/reliability summary). The <b>CSV</b> is a flat table of every result across all learner codes on this device — the anonymized attempt/evidence summary and device log the pilot needs (doc 14d). No names — just pseudonymous codes and evidence.</div>
   </div>
+
+  </main>
 
   <footer>
     Praxis pilot v0.1 · teacher pass-off demo. Decisions save in this browser (praxis.passoffs.v0_1).<br>
@@ -198,7 +210,7 @@ function render(){
       decided++;
       d.insertAdjacentHTML("beforeend",`
         <div class="card verified">
-          <div class="head"><h2>${s.title}</h2><span class="sid">${s.skillId}</span></div>
+          <div class="head"><h3>${s.title}</h3><span class="sid">${s.skillId}</span></div>
           <div class="ev">${evChips(p)}</div>
           <div class="decided">
             <span class="tag ${record.outcome}">${record.outcome==="pass"?"Passed":record.outcome==="coaching"?"Coaching needed":"Retry"}</span>
@@ -214,7 +226,7 @@ function render(){
       const flags=validityFlags(s.skillId);
       q.insertAdjacentHTML("beforeend",`
         <div class="card">
-          <div class="head"><h2>${s.title}</h2><span class="sid">${s.skillId}</span></div>
+          <div class="head"><h3>${s.title}</h3><span class="sid">${s.skillId}</span></div>
           <div class="pat">${s.pattern}</div>
           <div class="ev">${evChips(p)}</div>
           ${flags.length?`<div class="flags">⚑ ${flags.join(" · ")}</div>`:""}
@@ -238,7 +250,7 @@ function render(){
     waiting++;
     w.insertAdjacentHTML("beforeend",`
       <div class="card">
-        <div class="head"><h2>${s.title}</h2><span class="sid">${s.skillId}</span></div>
+        <div class="head"><h3>${s.title}</h3><span class="sid">${s.skillId}</span></div>
         <div class="ev">${evChips(p)||'<span class="chip">no evidence yet</span>'}</div>
         <div class="rubric">Digital prerequisites not met yet — <b>${res.label}</b>. Not in your queue until the student finishes the knowledge check and a clean, verified trigger round.</div>
       </div>`);

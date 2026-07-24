@@ -85,6 +85,13 @@
   footer{margin-top:42px;padding-top:20px;border-top:1px solid var(--line);
     color:var(--muted);font-size:11.5px;text-align:center;line-height:1.75}
 
+  /* Respect a reduced-motion preference (WCAG 2.3.3): a student with vestibular
+     sensitivity or migraine triggers needs an option that isn't "don't use the app". */
+  @media (prefers-reduced-motion: reduce){
+    *,*::before,*::after{animation-duration:.001ms !important;animation-iteration-count:1 !important;
+      transition-duration:.001ms !important;scroll-behavior:auto !important}
+  }
+
   @media (max-width:560px){
     .wrap{padding:32px 15px 48px}
     h1{font-size:25px}
