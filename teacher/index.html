@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Praxis pilot — teacher pass-off</title>
+<style>
+  :root{
+    --bg:#0F1117; --panel:#171A22; --panel2:#1E222C; --line:#2A2F3B;
+    --ink:#E8EBF2; --muted:#9AA3B2;
+    --cobalt:#5B8CFF; --orange:#FF9A5B; --green:#34D3A6; --purple:#A78BFA; --pink:#FF7DB0;
+    --shadow:0 10px 30px rgba(0,0,0,.45);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+  a{color:var(--cobalt)}
+  .wrap{max-width:940px;margin:0 auto;padding:22px 18px 60px;}
+  header.top{display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+    padding:12px 4px 18px;border-bottom:1px solid var(--line);margin-bottom:20px;}
+  .brand .logo{font-weight:800;letter-spacing:.5px;font-size:21px}
+  .brand .logo .dot{color:var(--pink)}
+  .brand .deck{color:var(--muted);font-size:13px;margin-top:2px}
+  .stats{margin-left:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .pill{background:var(--panel);border:1px solid var(--line);border-radius:999px;
+    padding:6px 12px;font-size:12.5px;white-space:nowrap}
+  .pill a{text-decoration:none}
+
+  .intro{color:var(--muted);font-size:13.5px;line-height:1.6;margin:0 0 20px;max-width:78ch}
+  .intro b{color:var(--ink)}
+
+  h3.sec{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin:24px 0 10px}
+  .queue{display:flex;flex-direction:column;gap:16px}
+  .empty{color:var(--muted);font-size:13.5px;background:var(--panel);border:1px dashed var(--line);
+    border-radius:12px;padding:16px}
+
+  .card{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);
+    border-radius:16px;box-shadow:var(--shadow);padding:18px 20px}
+  .card.verified{border-color:#4c4370}
+  .card .head{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+  .card h2{margin:0;font-size:18px}
+  .card .sid{margin-left:auto;font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace;font-size:11px;color:var(--muted)}
+  .card .pat{font-family:"SF Mono",ui-monospace,Menlo,monospace;letter-spacing:2px;color:var(--muted);font-size:12.5px;margin:6px 0 12px}
+
+  .ev{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+  .chip{border:1px solid var(--line);border-radius:999px;padding:5px 11px;font-size:12px;color:var(--muted);background:var(--panel)}
+  .chip b{color:var(--ink)}
+  .chip.a1{border-color:#2f5a4c} .chip.a2{border-color:#39406b}
+
+  .boundary{background:#12141c;border:1px dashed var(--line);border-radius:10px;padding:11px 13px;
+    font-size:12px;color:var(--muted);line-height:1.55;margin-bottom:14px}
+  .boundary b{color:var(--ink)}
+  .flags{color:var(--orange);font-size:12px;margin-bottom:12px}
+
+  .rubric{font-size:12.5px;color:var(--muted);margin:0 0 12px}
+  .rubric b{color:var(--ink)}
+  .rubric ul{margin:6px 0 0;padding-left:20px} .rubric li{margin-bottom:3px}
+
+  .actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  button{font:inherit;cursor:pointer;border-radius:10px;border:1px solid var(--line);
+    background:var(--panel);color:var(--ink);padding:9px 14px;font-size:13px;font-weight:600;transition:.15s}
+  button:hover{border-color:#3a4150;background:var(--panel2)}
+  button.pass{border-color:var(--green);color:#9df0d6}
+  button.coach{border-color:var(--orange);color:#ffc79d}
+  button.retry{border-color:var(--cobalt);color:#cfe0ff}
+  select{font:inherit;font-size:13px;background:#0b0d12;border:1px solid var(--line);color:var(--ink);
+    border-radius:9px;padding:9px 11px}
+  .reasonrow{display:none;gap:10px;flex-wrap:wrap;align-items:center;margin-top:12px}
+  .reasonrow.show{display:flex}
+
+  .decided{display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:13px}
+  .decided .tag{font-weight:800;border-radius:6px;padding:2px 9px;font-size:12px;color:#0b0d12}
+  .decided .tag.pass{background:var(--green)} .decided .tag.coaching{background:var(--orange)} .decided .tag.retry{background:var(--cobalt)}
+  .decided .when{color:var(--muted);font-size:11.5px}
+  .decided button.undo{border:none;background:none;color:var(--cobalt);text-decoration:underline;padding:0;font-weight:500;font-size:12px}
+
+  footer{margin-top:26px;color:var(--muted);font-size:11.5px;text-align:center;line-height:1.6}
+  .foot-reset{background:none;border:none;color:var(--cobalt);cursor:pointer;font-size:11.5px;padding:0;text-decoration:underline}
+  .toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(30px);
+    background:var(--green);color:#062018;font-weight:700;padding:12px 18px;border-radius:12px;
+    box-shadow:var(--shadow);opacity:0;transition:.3s;pointer-events:none;z-index:20;font-size:14px}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <div class="logo">Teacher pass-off<span class="dot">.</span></div>
+      <div class="deck">Praxis pilot · local demo view</div>
+    </div>
+    <div class="stats">
+      <div class="pill"><a href="../pilot/">← Student home</a></div>
+    </div>
+  </header>
+
+  <p class="intro">This is the <b>teacher side</b> of the pilot. Praxis places a student in your queue only
+    when the <b>digital prerequisites</b> are met (knowledge + a clean, reliability-verified controller round).
+    Your job is the part a computer can't judge: <b>the actual playing</b>. Record a decision and it flows
+    back to the student's home page. This is a local demo — no accounts, no student data leaves this device.</p>
+
+  <h3 class="sec">Ready for your pass-off</h3>
+  <div class="queue" id="queue"></div>
+
+  <h3 class="sec">Recorded</h3>
+  <div class="queue" id="decided"></div>
+
+  <h3 class="sec">Not ready yet</h3>
+  <div class="queue" id="waiting"></div>
+
+  <footer>
+    Praxis pilot v0.1 · teacher pass-off demo. Decisions save in this browser (praxis.passoffs.v0_1).<br>
+    <button class="foot-reset" id="resetPass">Clear all recorded pass-offs</button><br>
+    © 2026 Backwerd Rimshot, LLC. All rights reserved.
+  </footer>
+</div>
+<div class="toast" id="toast"></div>
+
+<script src="../shared/praxis-results.js"></script>
+<script src="../shared/praxis-state.js"></script>
+<script>
+/* =====================================================================
+   Teacher pass-off view (doc 16 step 7). Reads the shared ledger + state
+   engine, shows the ready-for-teacher queue with a labeled evidence
+   summary, and records Pass / Coaching / Retry (+ reason) into the local
+   praxis.passoffs.v0_1 store — which the state engine already consumes,
+   so a decision flips the student's state on the pilot home.
+   Presentation + human decision only; it never fabricates digital evidence.
+   ===================================================================== */
+const $=s=>document.querySelector(s);
+const PASS_KEY="praxis.passoffs.v0_1";
+
+const SKILLS=[
+  {skillId:"rudiment.single-stroke-roll.core", title:"Single stroke roll", level:1, pattern:"RLRL RLRL"},
+  {skillId:"rudiment.double-stroke-roll.core", title:"Double stroke roll", level:1, pattern:"RRLL RRLL"},
+  {skillId:"rudiment.single-paradiddle.core", title:"Single paradiddle", level:2, pattern:"RLRR LRLL"},
+];
+/* Skill-specific physical rubric prompts (Tier C — teacher-observed only). */
+const RUBRIC={
+  "rudiment.single-stroke-roll.core":["Relaxed alternating strokes","Even rebound both hands","Consistent sound","Steady pulse"],
+  "rudiment.double-stroke-roll.core":["Two clear strokes per hand","Even doubles (not a flam or buzz)","Rebound control","Steady pulse"],
+  "rudiment.single-paradiddle.core":["Correct actual hands (RLRR LRLL)","Clean diddle","Accent/flow as assigned","Even sound, steady pulse"]
+};
+/* Doc 16 initial coaching reasons. */
+const REASONS=["actual sticking / hand use","grip or tension","rebound / stroke motion",
+  "uneven rhythm or pulse","diddle quality","sound / tone consistency","accent / dynamic control",
+  "student cannot explain the pattern"];
+
+let storageOK=true;
+try{ localStorage.setItem("praxis.__probe","1"); localStorage.removeItem("praxis.__probe"); }catch(e){ storageOK=false; }
+const LEDGER=PraxisResults.create();
+if(storageOK) LEDGER.migrateLegacy();
+
+function passoffs(){ try{return JSON.parse(localStorage.getItem(PASS_KEY)||"{}");}catch(e){return {};} }
+function savePassoff(skillId,record){
+  const all=passoffs();
+  if(record) all[skillId]=record; else delete all[skillId];
+  try{localStorage.setItem(PASS_KEY,JSON.stringify(all));}catch(e){}
+}
+
+function evChips(p){
+  const c=[];
+  if(p.knowledge) c.push(`<span class="chip a1"><b>${p.knowledge.score}%</b> knowledge · Count It</span>`);
+  if(p.recall)    c.push(`<span class="chip a1"><b>${p.recall.score}%</b> recall · Stick Lab</span>`);
+  if(p.sequence)  c.push(`<span class="chip a2"><b>${p.sequence.score}%</b> controller${p.sequence.qualifying?"":" (unverified)"} · Stick Lab</span>`);
+  return c.join("");
+}
+function validityFlags(skillId){
+  const rs=LEDGER.bySkill(skillId), flags=new Set();
+  rs.forEach(r=>r.evidence.forEach(e=>(e.validity||[]).forEach(v=>flags.add(v))));
+  return [...flags];
+}
+
+function render(){
+  const q=$("#queue"), d=$("#decided"), w=$("#waiting");
+  q.innerHTML=""; d.innerHTML=""; w.innerHTML="";
+  const po=passoffs();
+  let ready=0, decided=0, waiting=0;
+
+  SKILLS.forEach(s=>{
+    const p=storageOK?LEDGER.profile(s.skillId):{knowledge:null,recall:null,sequence:null};
+    const record=po[s.skillId]||null;
+    const res=PraxisState.evaluate(p,{skillId:s.skillId,passoff:record});
+
+    if(record){                                   // already decided
+      decided++;
+      d.insertAdjacentHTML("beforeend",`
+        <div class="card verified">
+          <div class="head"><h2>${s.title}</h2><span class="sid">${s.skillId}</span></div>
+          <div class="ev">${evChips(p)}</div>
+          <div class="decided">
+            <span class="tag ${record.outcome}">${record.outcome==="pass"?"Passed":record.outcome==="coaching"?"Coaching needed":"Retry"}</span>
+            ${record.reason?`<span>${record.reason}</span>`:""}
+            <span class="when">${new Date(record.at).toLocaleString()}</span>
+            <button class="undo" data-undo="${s.skillId}">undo</button>
+          </div>
+        </div>`);
+      return;
+    }
+    if(res.state==="ready-for-teacher"){          // in the queue
+      ready++;
+      const flags=validityFlags(s.skillId);
+      q.insertAdjacentHTML("beforeend",`
+        <div class="card">
+          <div class="head"><h2>${s.title}</h2><span class="sid">${s.skillId}</span></div>
+          <div class="pat">${s.pattern}</div>
+          <div class="ev">${evChips(p)}</div>
+          ${flags.length?`<div class="flags">⚑ ${flags.join(" · ")}</div>`:""}
+          <div class="boundary"><b>Verified digitally:</b> answer correctness + which triggers were pressed, in order.
+            <b>Not verified:</b> the actual hands, grip, rebound, sound, and musical execution — that's this pass-off.</div>
+          <div class="rubric"><b>Watch for:</b><ul>${RUBRIC[s.skillId].map(x=>`<li>${x}</li>`).join("")}</ul></div>
+          <div class="actions">
+            <button class="pass" data-pass="${s.skillId}">✓ Pass</button>
+            <button class="coach" data-coach="${s.skillId}">Coaching needed</button>
+            <button class="retry" data-retry="${s.skillId}">Retry digital</button>
+          </div>
+          <div class="reasonrow" id="reason-${cssId(s.skillId)}">
+            <select id="sel-${cssId(s.skillId)}">${REASONS.map(r=>`<option>${r}</option>`).join("")}</select>
+            <button data-confirm="${s.skillId}">Record</button>
+            <button data-cancel="${s.skillId}" style="border:none;background:none;color:var(--muted)">cancel</button>
+          </div>
+        </div>`);
+      return;
+    }
+    // not ready
+    waiting++;
+    w.insertAdjacentHTML("beforeend",`
+      <div class="card">
+        <div class="head"><h2>${s.title}</h2><span class="sid">${s.skillId}</span></div>
+        <div class="ev">${evChips(p)||'<span class="chip">no evidence yet</span>'}</div>
+        <div class="rubric">Digital prerequisites not met yet — <b>${res.label}</b>. Not in your queue until the student finishes the knowledge check and a clean, verified trigger round.</div>
+      </div>`);
+  });
+
+  if(!ready) q.innerHTML=`<div class="empty">No students are waiting for a pass-off right now. They appear here once their digital prerequisites are met.</div>`;
+  if(!decided) d.innerHTML=`<div class="empty">Nothing recorded yet.</div>`;
+  if(!waiting) w.innerHTML=`<div class="empty">Every skill is either ready or already recorded.</div>`;
+  if(!storageOK) q.innerHTML=`<div class="empty">⚠ This device isn't saving data (private mode). The pass-off queue can't load a profile here.</div>`;
+  wire();
+}
+
+const cssId=s=>s.replace(/[^a-z0-9]/gi,"-");
+function wire(){
+  document.querySelectorAll("[data-pass]").forEach(b=>b.onclick=()=>record(b.dataset.pass,"pass"));
+  document.querySelectorAll("[data-coach]").forEach(b=>b.onclick=()=>openReason(b.dataset.coach,"coaching"));
+  document.querySelectorAll("[data-retry]").forEach(b=>b.onclick=()=>openReason(b.dataset.retry,"retry"));
+  document.querySelectorAll("[data-confirm]").forEach(b=>b.onclick=()=>{
+    const id=b.dataset.confirm, sel=$("#sel-"+cssId(id));
+    record(id, pendingOutcome[id]||"coaching", sel?sel.value:"");
+  });
+  document.querySelectorAll("[data-cancel]").forEach(b=>b.onclick=()=>{
+    $("#reason-"+cssId(b.dataset.cancel)).classList.remove("show"); delete pendingOutcome[b.dataset.cancel];
+  });
+  document.querySelectorAll("[data-undo]").forEach(b=>b.onclick=()=>{ savePassoff(b.dataset.undo,null); render(); toast("Pass-off undone"); });
+}
+const pendingOutcome={};
+function openReason(skillId,outcome){
+  pendingOutcome[skillId]=outcome;
+  $("#reason-"+cssId(skillId)).classList.add("show");
+}
+function record(skillId,outcome,reason){
+  savePassoff(skillId,{outcome, reason:reason||undefined, at:new Date().toISOString()});
+  render();
+  toast(outcome==="pass"?"Passed — student marked teacher-verified":outcome==="coaching"?"Coaching recorded":"Sent back for a retry");
+}
+
+let toastT=null;
+function toast(m){ const t=$("#toast"); t.textContent=m; t.className="toast show"; clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove("show"),2400); }
+
+$("#resetPass").addEventListener("click",()=>{
+  if(confirm("Clear all recorded teacher pass-offs on this device? (Student evidence in the ledger is untouched.)")){
+    try{localStorage.removeItem(PASS_KEY);}catch(e){} render(); toast("Pass-offs cleared");
+  }
+});
+
+render();
+</script>
+</body>
+</html>
