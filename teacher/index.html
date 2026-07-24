@@ -12,6 +12,7 @@
     --shadow:0 10px 30px rgba(0,0,0,.45);
   }
   *{box-sizing:border-box}
+  a:focus-visible,button:focus-visible,[tabindex]:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--cobalt);outline-offset:2px}
   html,body{margin:0;background:var(--bg);color:var(--ink);
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
   a{color:var(--cobalt)}
@@ -123,7 +124,7 @@
     © 2026 Backwerd Rimshot, LLC. All rights reserved.
   </footer>
 </div>
-<div class="toast" id="toast"></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script src="../shared/praxis-learner.js"></script>
 <script src="../shared/praxis-results.js"></script>
@@ -226,7 +227,7 @@ function render(){
             <button class="retry" data-retry="${s.skillId}">Retry digital</button>
           </div>
           <div class="reasonrow" id="reason-${cssId(s.skillId)}">
-            <select id="sel-${cssId(s.skillId)}">${REASONS.map(r=>`<option>${r}</option>`).join("")}</select>
+            <select id="sel-${cssId(s.skillId)}" aria-label="Reason for ${s.title}">${REASONS.map(r=>`<option>${r}</option>`).join("")}</select>
             <button data-confirm="${s.skillId}">Record</button>
             <button data-cancel="${s.skillId}" style="border:none;background:none;color:var(--muted)">cancel</button>
           </div>

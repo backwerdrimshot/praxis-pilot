@@ -13,6 +13,7 @@
     --shadow:0 10px 30px rgba(0,0,0,.45);
   }
   *{box-sizing:border-box}
+  a:focus-visible,button:focus-visible,[tabindex]:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--cobalt);outline-offset:2px}
   html,body{margin:0;background:var(--bg);color:var(--ink);
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
   a{color:var(--cobalt)}
@@ -232,8 +233,8 @@
         </div>
 
         <div class="pads">
-          <div class="pad L" id="padL"><span>L</span><small id="padLkeys">key F</small></div>
-          <div class="pad R" id="padR"><span>R</span><small id="padRkeys">key J</small></div>
+          <div class="pad L" id="padL" role="button" tabindex="0" aria-label="Left hand pad — tap, press Enter, or use your mapped Left key"><span>L</span><small id="padLkeys">key F</small></div>
+          <div class="pad R" id="padR" role="button" tabindex="0" aria-label="Right hand pad — tap, press Enter, or use your mapped Right key"><span>R</span><small id="padRkeys">key J</small></div>
         </div>
       </div>
 
@@ -294,7 +295,7 @@
     © 2026 Backwerd Rimshot, LLC. All rights reserved.
   </footer>
 </div>
-<div class="toast" id="toast"></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script src="../shared/praxis-learner.js"></script>
 <script src="../shared/praxis-input.js"></script>
@@ -427,10 +428,9 @@ document.addEventListener("keydown",e=>{
 /* --- touch/pointer adapter: on-screen pads --- */
 ["L","R"].forEach(h=>{
   const el=$("#pad"+h);
-  el.addEventListener("pointerdown",e=>{
-    e.preventDefault(); ac(); // unlock audio on first gesture
-    IM.press(h==="L"?"LEFT_HAND":"RIGHT_HAND","touch","pad"+h);
-  });
+  const fire=()=>{ ac(); IM.press(h==="L"?"LEFT_HAND":"RIGHT_HAND","touch","pad"+h); };
+  el.addEventListener("pointerdown",e=>{ e.preventDefault(); fire(); });
+  el.addEventListener("keydown",e=>{ if(e.key==="Enter"){ e.preventDefault(); fire(); } }); // keyboard/switch access
 });
 function flashPad(action){
   const h=action==="LEFT_HAND"?"L":action==="RIGHT_HAND"?"R":null; if(!h) return;
