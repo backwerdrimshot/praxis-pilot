@@ -296,6 +296,7 @@
 </div>
 <div class="toast" id="toast"></div>
 
+<script src="../shared/praxis-learner.js"></script>
 <script src="../shared/praxis-input.js"></script>
 <script src="../shared/praxis-results.js"></script>
 <script>
@@ -339,7 +340,7 @@ const LAUNCH_SKILLS=new Set([
 const NAV=DECK.map((c,i)=>i).filter(i=>LAUNCH_SKILLS.has(DECK[i].skillId));
 
 /* ---------------- Persistent state ---------------- */
-const LS_KEY="praxis.cts.v1";
+const LS_KEY=PraxisLearner.key("praxis.cts.v1");   // per-learner on shared devices (doc 14d)
 function defaultState(){return{
   bindings:{L:[{code:"KeyF",label:"F"},null], R:[{code:"KeyJ",label:"J"},null]},
   refractoryMs:25,
@@ -354,8 +355,9 @@ function save(){try{localStorage.setItem(LS_KEY,JSON.stringify(S));}catch(e){}}
 
 /* Shared cross-app ledger (doc 16): migrate this app's + the sibling's local
    attempts once on load, then dual-write new results as they happen. */
-const LEDGER=PraxisResults.create();
+const LEDGER=PraxisResults.create({keySuffix:PraxisLearner.suffix()});
 LEDGER.migrateLegacy();
+PraxisLearner.mountBar(".wrap");
 
 /* ---------------- Audio (Web Audio, lazy) ---------------- */
 let AC=null;

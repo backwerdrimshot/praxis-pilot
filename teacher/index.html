@@ -108,6 +108,15 @@
   <h3 class="sec">Not ready yet</h3>
   <div class="queue" id="waiting"></div>
 
+  <h3 class="sec">Collect the data</h3>
+  <div class="card">
+    <div class="actions">
+      <button id="expJson">⬇ This learner (JSON)</button>
+      <button id="expCsv">⬇ Whole device (CSV)</button>
+    </div>
+    <div class="rubric" style="margin-top:12px;margin-bottom:0">The <b>JSON</b> is the current learner's full record (results, pass-offs, device/reliability summary). The <b>CSV</b> is a flat table of every result across all learner codes on this device — the anonymized attempt/evidence summary and device log the pilot needs (doc 14d). No names — just pseudonymous codes and evidence.</div>
+  </div>
+
   <footer>
     Praxis pilot v0.1 · teacher pass-off demo. Decisions save in this browser (praxis.passoffs.v0_1).<br>
     <button class="foot-reset" id="resetPass">Clear all recorded pass-offs</button><br>
@@ -116,6 +125,7 @@
 </div>
 <div class="toast" id="toast"></div>
 
+<script src="../shared/praxis-learner.js"></script>
 <script src="../shared/praxis-results.js"></script>
 <script src="../shared/praxis-state.js"></script>
 <script>
@@ -128,7 +138,7 @@
    Presentation + human decision only; it never fabricates digital evidence.
    ===================================================================== */
 const $=s=>document.querySelector(s);
-const PASS_KEY="praxis.passoffs.v0_1";
+const PASS_KEY=PraxisLearner.key("praxis.passoffs.v0_1");
 const RETENTION_DAYS=3;   // doc 14d: a delayed check 2–7 days after a pass
 
 const SKILLS=[
@@ -149,8 +159,8 @@ const REASONS=["actual sticking / hand use","grip or tension","rebound / stroke 
 
 let storageOK=true;
 try{ localStorage.setItem("praxis.__probe","1"); localStorage.removeItem("praxis.__probe"); }catch(e){ storageOK=false; }
-const LEDGER=PraxisResults.create();
-if(storageOK) LEDGER.migrateLegacy();
+const LEDGER=PraxisResults.create({keySuffix:PraxisLearner.suffix()});
+if(storageOK){ LEDGER.migrateLegacy(); PraxisLearner.mountBar(".wrap"); }
 
 function passoffs(){ try{return JSON.parse(localStorage.getItem(PASS_KEY)||"{}");}catch(e){return {};} }
 function savePassoff(skillId,record){
@@ -266,6 +276,47 @@ function record(skillId,outcome,reason){
   render();
   toast(outcome==="pass"?`Passed — a retention check is due in ${RETENTION_DAYS} days`:outcome==="coaching"?"Coaching recorded":"Sent back for a retry");
 }
+
+/* ---------------- Export (doc 14d: anonymized attempt/evidence summary) ---------------- */
+function deviceSummaryFor(suffix){
+  try{ const s=JSON.parse(localStorage.getItem("praxis.cts.v1"+suffix)||"{}"); return s.relTest?s.relTest.summary:null; }catch(e){ return null; }
+}
+function learnerExport(code){
+  const suffix=code?"::"+code:"";
+  const L=PraxisResults.create({keySuffix:suffix});
+  let po={}; try{ po=JSON.parse(localStorage.getItem("praxis.passoffs.v0_1"+suffix)||"{}"); }catch(e){}
+  return {schema:"praxis.export.v0_1", learner:code||"(no code)", exportedAt:new Date().toISOString(),
+    results:L.all(), passoffs:po, deviceTest:deviceSummaryFor(suffix), quarantined:L.quarantined()};
+}
+function csvEscape(v){ v=v==null?"":String(v); return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v; }
+function deviceRows(){
+  const rows=[["learner","skillId","app","evidenceType","score","outcome","inputSource","deviceTest","validity","completedAt"]];
+  PraxisLearner.knownCodes().forEach(code=>{
+    const suffix=code?"::"+code:"";
+    PraxisResults.create({keySuffix:suffix}).all().forEach(r=>{
+      (r.evidence||[]).forEach(e=>rows.push([code||"(no code)", r.skillId, r.appId, e.evidenceType,
+        e.score!=null?e.score:(e.accuracy!=null?e.accuracy:""), e.outcome||"",
+        r.inputSource||"", (r.deviceTest&&r.deviceTest.status)||"", (e.validity||[]).join("; "), r.completedAt]));
+    });
+  });
+  return rows;
+}
+function downloadFile(name, content, mime){
+  const blob=new Blob([content],{type:mime}), url=URL.createObjectURL(blob);
+  const a=document.createElement("a"); a.href=url; a.download=name; document.body.appendChild(a); a.click();
+  setTimeout(()=>{a.remove(); URL.revokeObjectURL(url);},0);
+}
+const stamp=()=>new Date().toISOString().slice(0,10);
+$("#expJson").addEventListener("click",()=>{
+  const data=learnerExport(PraxisLearner.current());
+  downloadFile(`praxis-${data.learner.replace(/[^A-Za-z0-9]/g,"")||"nocode"}-${stamp()}.json`, JSON.stringify(data,null,2), "application/json");
+  toast("Learner record downloaded");
+});
+$("#expCsv").addEventListener("click",()=>{
+  const csv=deviceRows().map(r=>r.map(csvEscape).join(",")).join("\n");
+  downloadFile(`praxis-device-${stamp()}.csv`, csv, "text/csv");
+  toast("Device CSV downloaded");
+});
 
 let toastT=null;
 function toast(m){ const t=$("#toast"); t.textContent=m; t.className="toast show"; clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove("show"),2400); }

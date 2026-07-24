@@ -112,6 +112,7 @@
   </footer>
 </div>
 
+<script src="../shared/praxis-learner.js"></script>
 <script src="../shared/praxis-results.js"></script>
 <script src="../shared/praxis-state.js"></script>
 <script>
@@ -137,8 +138,10 @@ let storageOK=true;
 try{ const k="praxis.__probe"; localStorage.setItem(k,"1"); localStorage.removeItem(k); }
 catch(e){ storageOK=false; }
 
-const LEDGER=PraxisResults.create();
+const LEDGER=PraxisResults.create({keySuffix:PraxisLearner.suffix()});
 if(storageOK) LEDGER.migrateLegacy();   // pick up anything the apps wrote before this page opened
+if(storageOK) PraxisLearner.mountBar(".wrap");   // shared-device learner code (doc 14d)
+const PASS_KEY=PraxisLearner.key("praxis.passoffs.v0_1");
 
 function launchUrl(app,skillId){
   const mode=app==="count-it-contract"?"quiz":"challenge";
@@ -149,7 +152,7 @@ function launchUrl(app,skillId){
 /* Local teacher pass-off decisions (doc 16 praxis.passoffs.v0_1). Empty in v0.1
    until the teacher view exists; the state engine reads it when present. */
 function passoffFor(skillId){
-  try{ const s=JSON.parse(localStorage.getItem("praxis.passoffs.v0_1")||"{}"); return s[skillId]||null; }
+  try{ const s=JSON.parse(localStorage.getItem(PASS_KEY)||"{}"); return s[skillId]||null; }
   catch(e){ return null; }
 }
 
@@ -206,19 +209,20 @@ function render(){
 
 $("#resetAll").addEventListener("click",()=>{
   if(!storageOK){ return; }
-  if(confirm("Reset ALL pilot data on this device — the shared results ledger and both apps' local stores?")){
-    ["praxis.results.v0_1","praxis.results.v0_1.quarantine","praxis.cts.v1","praxis.cia1.v1"]
-      .forEach(k=>{try{localStorage.removeItem(k);}catch(e){}});
+  const who=PraxisLearner.current()?`for learner ${PraxisLearner.current()}`:"in shared practice mode";
+  if(confirm(`Reset pilot data ${who} — the results ledger, both apps' stores, and pass-offs?`)){
+    ["praxis.results.v0_1","praxis.results.v0_1.quarantine","praxis.cts.v1","praxis.cia1.v1","praxis.passoffs.v0_1"]
+      .map(k=>PraxisLearner.key(k)).forEach(k=>{try{localStorage.removeItem(k);}catch(e){}});
     render();
   }
 });
 
 $("#demoRetain").addEventListener("click",()=>{
   if(!storageOK) return;
-  let po; try{ po=JSON.parse(localStorage.getItem("praxis.passoffs.v0_1")||"{}"); }catch(e){ po={}; }
+  let po; try{ po=JSON.parse(localStorage.getItem(PASS_KEY)||"{}"); }catch(e){ po={}; }
   let n=0;
   Object.keys(po).forEach(id=>{ if(po[id].outcome==="pass"){ po[id].retentionDueAt=new Date(Date.now()-60000).toISOString(); n++; } });
-  try{ localStorage.setItem("praxis.passoffs.v0_1", JSON.stringify(po)); }catch(e){}
+  try{ localStorage.setItem(PASS_KEY, JSON.stringify(po)); }catch(e){}
   render();
   if(!n){ const w=$("#storeWarn"); w.className="warn show"; w.textContent="No teacher-verified skills yet — pass one in the teacher view first, then this demo control forces its retention check due."; }
 });

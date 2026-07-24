@@ -59,8 +59,13 @@ function create(opts){
   const read=k=>{ try{const s=store.getItem(k); return s?JSON.parse(s):[];}catch(e){return [];} };
   const write=(k,v)=>{ try{store.setItem(k,JSON.stringify(v));}catch(e){} };
 
-  const all=()=>read(LEDGER_KEY);
-  const quarantined=()=>read(QUAR_KEY);
+  /* Optional per-learner namespace (doc 14d shared devices): keySuffix like
+     "::P03" scopes the ledger, quarantine, and the legacy stores it migrates. */
+  const sfx=opts.keySuffix||"";
+  const LK=LEDGER_KEY+sfx, QK=QUAR_KEY+sfx, LEG=LEGACY_KEYS.map(k=>k+sfx);
+
+  const all=()=>read(LK);
+  const quarantined=()=>read(QK);
   const has=attemptId=>all().some(r=>r.attemptId===attemptId);
 
   function append(result){
@@ -68,12 +73,12 @@ function create(opts){
     if(!v.ok){
       const q=quarantined();
       q.push({at:new Date().toISOString(), attemptId:result&&result.attemptId, reasons:v.errors, result});
-      write(QUAR_KEY,q);
+      write(QK,q);
       return {status:"quarantined", reasons:v.errors};
     }
     const led=all();
     if(led.some(r=>r.attemptId===result.attemptId)) return {status:"duplicate"};
-    led.push(result); write(LEDGER_KEY,led);
+    led.push(result); write(LK,led);
     return {status:"added"};
   }
 
@@ -84,7 +89,7 @@ function create(opts){
      without deleting the originals. Idempotent (dedup by attemptId). */
   function migrateLegacy(){
     let imported=0, skipped=0, quar=0;
-    for(const key of LEGACY_KEYS){
+    for(const key of LEG){
       let obj=null; try{const s=store.getItem(key); obj=s?JSON.parse(s):null;}catch(e){}
       const attempts=(obj&&Array.isArray(obj.attempts))?obj.attempts:[];
       for(const a of attempts){
@@ -122,7 +127,7 @@ function create(opts){
     };
   }
 
-  const clear=()=>{ write(LEDGER_KEY,[]); write(QUAR_KEY,[]); };
+  const clear=()=>{ write(LK,[]); write(QK,[]); };
 
   return {append, all, bySkill, latestBySkill, quarantined, migrateLegacy, profile, has, clear,
     LEDGER_KEY, QUAR_KEY};

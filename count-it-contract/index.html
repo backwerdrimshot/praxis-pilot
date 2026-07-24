@@ -198,6 +198,7 @@
 </div>
 <div class="toast" id="toast"></div>
 
+<script src="../shared/praxis-learner.js"></script>
 <script src="../shared/praxis-results.js"></script>
 <script>
 /* =====================================================================
@@ -306,7 +307,7 @@ const QUESTIONS={
 };
 
 /* ---------------- Persistent state ---------------- */
-const LS_KEY="praxis.cia1.v1";
+const LS_KEY=PraxisLearner.key("praxis.cia1.v1");   // per-learner on shared devices (doc 14d)
 const SIBLING_LS_KEY="praxis.cts.v1";   // Copy the Sticking's store (read-only here)
 function defaultState(){return{attempts:[],cardIdx:0};}
 let S=defaultState();
@@ -315,8 +316,9 @@ function save(){try{localStorage.setItem(LS_KEY,JSON.stringify(S));}catch(e){}}
 
 /* Shared cross-app ledger (doc 16): migrate this app's + the sibling's local
    attempts once on load; the combined profile below reads only the ledger. */
-const LEDGER=PraxisResults.create();
+const LEDGER=PraxisResults.create({keySuffix:PraxisLearner.suffix()});
 LEDGER.migrateLegacy();
+PraxisLearner.mountBar(".wrap");
 
 /* ---------------- Audio (light) ---------------- */
 let AC=null;
