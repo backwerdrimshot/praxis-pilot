@@ -129,6 +129,7 @@
    ===================================================================== */
 const $=s=>document.querySelector(s);
 const PASS_KEY="praxis.passoffs.v0_1";
+const RETENTION_DAYS=3;   // doc 14d: a delayed check 2–7 days after a pass
 
 const SKILLS=[
   {skillId:"rudiment.single-stroke-roll.core", title:"Single stroke roll", level:1, pattern:"RLRL RLRL"},
@@ -259,9 +260,11 @@ function openReason(skillId,outcome){
   $("#reason-"+cssId(skillId)).classList.add("show");
 }
 function record(skillId,outcome,reason){
-  savePassoff(skillId,{outcome, reason:reason||undefined, at:new Date().toISOString()});
+  const rec={outcome, reason:reason||undefined, at:new Date().toISOString()};
+  if(outcome==="pass") rec.retentionDueAt=new Date(Date.now()+RETENTION_DAYS*86400000).toISOString();
+  savePassoff(skillId,rec);
   render();
-  toast(outcome==="pass"?"Passed — student marked teacher-verified":outcome==="coaching"?"Coaching recorded":"Sent back for a retry");
+  toast(outcome==="pass"?`Passed — a retention check is due in ${RETENTION_DAYS} days`:outcome==="coaching"?"Coaching recorded":"Sent back for a retry");
 }
 
 let toastT=null;

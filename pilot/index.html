@@ -106,7 +106,8 @@
 
   <footer>
     Praxis pilot v0.1 · Backwerd Rhythm Shop · doc 16 build brief.<br>
-    Everything stays in this browser. <button class="foot-reset" id="resetAll">Reset all pilot data on this device</button><br>
+    Everything stays in this browser. <button class="foot-reset" id="resetAll">Reset all pilot data on this device</button>
+    · <button class="foot-reset" id="demoRetain">Demo: make retention due now</button><br>
     © 2026 Backwerd Rimshot, LLC. All rights reserved.
   </footer>
 </div>
@@ -175,7 +176,10 @@ function render(){
     if(!p.recall&&!p.sequence) dims.push(dim("none","","trigger challenge — not yet"));
     dims.push(dim("none","","teacher pass-off — pending"));
 
-    const res=PraxisState.evaluate(p, {skillId:s.skillId, passoff:passoffFor(s.skillId)});
+    const record=passoffFor(s.skillId);
+    const retention=PraxisState.retentionInput(record, storageOK?LEDGER.bySkill(s.skillId):[],
+      {knowledgeReady:KNOWLEDGE_READY(s.skillId)});
+    const res=PraxisState.evaluate(p, {skillId:s.skillId, passoff:record, retention});
     const na=res.nextAction;
     const go=[];
     if(na.app){
@@ -207,6 +211,16 @@ $("#resetAll").addEventListener("click",()=>{
       .forEach(k=>{try{localStorage.removeItem(k);}catch(e){}});
     render();
   }
+});
+
+$("#demoRetain").addEventListener("click",()=>{
+  if(!storageOK) return;
+  let po; try{ po=JSON.parse(localStorage.getItem("praxis.passoffs.v0_1")||"{}"); }catch(e){ po={}; }
+  let n=0;
+  Object.keys(po).forEach(id=>{ if(po[id].outcome==="pass"){ po[id].retentionDueAt=new Date(Date.now()-60000).toISOString(); n++; } });
+  try{ localStorage.setItem("praxis.passoffs.v0_1", JSON.stringify(po)); }catch(e){}
+  render();
+  if(!n){ const w=$("#storeWarn"); w.className="warn show"; w.textContent="No teacher-verified skills yet — pass one in the teacher view first, then this demo control forces its retention check due."; }
 });
 
 render();

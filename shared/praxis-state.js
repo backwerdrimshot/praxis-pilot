@@ -120,5 +120,29 @@ function build(state, nextAction, skillId){
   return {state, label:LABELS[state], skillId, ready:state==="ready-for-teacher", nextAction};
 }
 
-global.PraxisState={evaluate, LABELS, defaultKnowledgeReady, version:"0.1.0"};
+/* Derive the { due, passed } retention input for evaluate() from a pass-off
+   record + the skill's ledger results. A teacher pass sets `retentionDueAt`;
+   once that date arrives, retention "passes" when a FRESH qualifying result
+   (exact verified controller sequence, or knowledge at threshold) lands on or
+   after the due date. Pure — pass `now` to test without waiting real days. */
+function retentionInput(passoff, results, opts){
+  opts=opts||{};
+  if(!passoff || passoff.outcome!=="pass" || !passoff.retentionDueAt) return null;
+  const dueAt=new Date(passoff.retentionDueAt).getTime();
+  const now=opts.now!=null?opts.now:Date.now();
+  if(isNaN(dueAt) || now<dueAt) return null;              // not due yet → teacher-verified
+  const kReady=opts.knowledgeReady!=null?opts.knowledgeReady:100;
+  const fresh=(results||[]).some(r=>{
+    if(new Date(r.completedAt).getTime()<dueAt) return false;
+    return (r.evidence||[]).some(e=>{
+      const nonQual=Array.isArray(e.validity)&&e.validity.some(v=>/not qualifying|not passed/i.test(v));
+      if(e.evidenceType==="A2_CONTROLLER_SEQUENCE") return !nonQual && (e.accuracy!=null?e.accuracy:e.score)>=100;
+      if(e.evidenceType==="A1_ANSWER_CORRECTNESS")  return e.score>=kReady;
+      return false;
+    });
+  });
+  return {due:true, passed: fresh?true:null};
+}
+
+global.PraxisState={evaluate, retentionInput, LABELS, defaultKnowledgeReady, version:"0.1.0"};
 })(typeof window!=="undefined"?window:globalThis);
