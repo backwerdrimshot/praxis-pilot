@@ -287,7 +287,10 @@ function learnerExport(code){
   const L=PraxisResults.create({keySuffix:suffix});
   let po={}; try{ po=JSON.parse(localStorage.getItem("praxis.passoffs.v0_1"+suffix)||"{}"); }catch(e){}
   return {schema:"praxis.export.v0_1", learner:code||"(no code)", exportedAt:new Date().toISOString(),
-    results:L.all(), passoffs:po, deviceTest:deviceSummaryFor(suffix), quarantined:L.quarantined()};
+    results:L.all(), passoffs:po, deviceTest:deviceSummaryFor(suffix), quarantined:L.quarantined(),
+    /* ledger.stats() says whether the cap dropped any older evidence, so an
+       export is never quietly incomplete. */
+    ledger:L.stats()};
 }
 function csvEscape(v){ v=v==null?"":String(v); return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v; }
 function deviceRows(){
