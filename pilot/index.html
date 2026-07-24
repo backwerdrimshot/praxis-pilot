@@ -42,6 +42,11 @@
     padding:2px 8px;font-size:11px}
   .skill .sid{margin-left:auto;font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace;
     font-size:11px;color:var(--muted)}
+  .state{border-radius:999px;padding:2px 9px;font-size:11px;border:1px solid var(--line);color:var(--muted);background:#0b0d12}
+  .state.st-ready-for-teacher{border-color:var(--green);color:#9df0d6}
+  .state.st-needs-retry{border-color:var(--orange);color:#ffc79d}
+  .state.st-teacher-verified,.state.st-retained{border-color:var(--purple);color:#c9baff}
+  .state.st-not-started{opacity:.6}
   .skill .pat{font-family:"SF Mono",ui-monospace,Menlo,monospace;letter-spacing:2px;color:var(--muted);
     font-size:12.5px;margin:6px 0 12px}
 
@@ -106,6 +111,7 @@
 </div>
 
 <script src="../shared/praxis-results.js"></script>
+<script src="../shared/praxis-state.js"></script>
 <script>
 /* =====================================================================
    Praxis pilot home (doc 16 step 4–5): reads the shared results ledger,
@@ -138,15 +144,11 @@ function launchUrl(app,skillId){
          `&contract=praxis.launch.v0_1&returnTo=../pilot/`;
 }
 
-/* Deterministic next action from the combined profile (doc 16 next-action rules). */
-function nextAction(skillId,p){
-  const kReady=KNOWLEDGE_READY(skillId);
-  if(!p.knowledge) return {txt:"Start with the knowledge check.", app:"count-it-contract", cta:"Knowledge check"};
-  if(p.knowledge.score<kReady) return {txt:`Review the sticking, then retry the knowledge check (need ${kReady}%).`, app:"count-it-contract", cta:"Retry knowledge check"};
-  if(!p.sequence) return {txt:"Run the input test, then enter the pattern through the triggers.", app:"copy-the-sticking", cta:"Trigger challenge"};
-  if(!p.sequence.qualifying) return {txt:"Re-run the reliability test so the controller result can count.", app:"copy-the-sticking", cta:"Re-test & retry"};
-  if(p.sequence.score<100) return {txt:"Practice a shorter first half, then retry the challenge.", app:"copy-the-sticking", cta:"Practice / retry"};
-  return {ready:true, txt:"Digital prerequisites met — ready for the teacher pass-off.", app:null};
+/* Local teacher pass-off decisions (doc 16 praxis.passoffs.v0_1). Empty in v0.1
+   until the teacher view exists; the state engine reads it when present. */
+function passoffFor(skillId){
+  try{ const s=JSON.parse(localStorage.getItem("praxis.passoffs.v0_1")||"{}"); return s[skillId]||null; }
+  catch(e){ return null; }
 }
 
 function dim(cls,label,inner){ return `<span class="dim ${cls}">${inner} ${label}</span>`; }
@@ -172,7 +174,8 @@ function render(){
     if(!p.recall&&!p.sequence) dims.push(dim("none","","trigger challenge — not yet"));
     dims.push(dim("none","","teacher pass-off — pending"));
 
-    const na=nextAction(s.skillId,p);
+    const res=PraxisState.evaluate(p, {skillId:s.skillId, passoff:passoffFor(s.skillId)});
+    const na=res.nextAction;
     const go=[];
     if(na.app){
       const cls=na.app==="count-it-contract"?"knowledge":"trigger";
@@ -183,11 +186,12 @@ function render(){
     if(na.app!=="copy-the-sticking") go.push(`<a class="btn trigger" href="${launchUrl("copy-the-sticking",s.skillId)}">Trigger challenge ↗</a>`);
 
     return `<div class="skill">
-      <div class="head"><h2>${na.ready?"★ ":""}${s.title}</h2><span class="lvl">Level ${s.level}</span>
+      <div class="head"><h2>${res.ready?"★ ":""}${s.title}</h2><span class="lvl">Level ${s.level}</span>
+        <span class="state st-${res.state}">${res.label}</span>
         <span class="sid">${s.skillId}</span></div>
       <div class="pat">${s.pattern}</div>
       <div class="dims">${dims.join("")}</div>
-      <div class="next ${na.ready?"ready":""}">
+      <div class="next ${res.ready?"ready":""}">
         <div><div class="lbl">Next</div><div class="txt">${na.txt}</div></div>
         <div class="go">${go.join("")}</div>
       </div>
