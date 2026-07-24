@@ -3,69 +3,222 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Praxis pilot — Backwerd Rhythm Shop</title>
+<title>Praxis pilot — one skill, two apps, one profile</title>
+<meta name="description" content="A percussion learning pilot: two different practice apps return honestly labeled evidence into one combined skill profile, then hand off to a teacher for what a browser cannot judge.">
 <style>
   :root{
     --bg:#0F1117; --panel:#171A22; --panel2:#1E222C; --line:#2A2F3B;
     --ink:#E8EBF2; --muted:#9AA3B2;
-    --cobalt:#5B8CFF; --green:#34D3A6; --purple:#A78BFA;
+    --cobalt:#5B8CFF; --orange:#FF9A5B; --green:#34D3A6; --purple:#A78BFA;
     --shadow:0 10px 30px rgba(0,0,0,.45);
   }
   *{box-sizing:border-box}
   html,body{margin:0;background:var(--bg);color:var(--ink);
-    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
-  .wrap{max-width:720px;margin:0 auto;padding:48px 18px 60px;}
-  h1{font-size:26px;margin:0 0 6px}
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    -webkit-text-size-adjust:100%;}
+  a{color:var(--cobalt)}
+  a:focus-visible,button:focus-visible,summary:focus-visible{outline:2px solid var(--cobalt);outline-offset:3px}
+  .wrap{max-width:820px;margin:0 auto;padding:44px 18px 56px}
+
+  /* ---- masthead ---- */
+  h1{font-size:30px;line-height:1.15;margin:0 0 10px;letter-spacing:-.2px}
   h1 .dot{color:var(--cobalt)}
-  .sub{color:var(--muted);font-size:14px;line-height:1.6;margin:0 0 28px}
-  .apps{display:grid;gap:16px}
-  a.app{display:block;text-decoration:none;color:var(--ink);
+  .promise{font-size:16px;line-height:1.6;margin:0 0 8px;max-width:56ch}
+  .promise b{color:var(--ink)}
+  .kicker{color:var(--muted);font-size:13px;line-height:1.6;margin:0 0 30px;max-width:60ch}
+
+  h2{font-size:13px;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);
+    margin:38px 0 14px;font-weight:700}
+
+  /* ---- the proof chain ---- */
+  ol.chain{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+  ol.chain li{background:var(--panel);border:1px solid var(--line);border-radius:12px;
+    padding:13px 16px;display:flex;gap:13px;align-items:flex-start;font-size:14px;line-height:1.55}
+  ol.chain .n{flex:none;width:23px;height:23px;border-radius:999px;background:#0b0d12;
+    border:1px solid var(--line);color:var(--muted);font-size:11.5px;font-weight:700;
+    display:flex;align-items:center;justify-content:center;margin-top:1px}
+  ol.chain li b{color:var(--ink)}
+  ol.chain li span{color:var(--muted)}
+  ol.chain li.teach{border-color:#4a3d5c}
+  ol.chain li.teach .n{border-color:var(--purple);color:#c9baff}
+
+  /* ---- honesty boundary ---- */
+  .boundary{margin-top:16px;background:var(--panel);border:1px solid var(--line);
+    border-left:3px solid var(--orange);border-radius:12px;padding:16px 18px;font-size:13.5px;line-height:1.65}
+  .boundary b{color:var(--ink)}
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:12px}
+  .cols div{background:#0b0d12;border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+  .cols h3{margin:0 0 7px;font-size:12px;text-transform:uppercase;letter-spacing:.5px}
+  .cols .yes h3{color:#9df0d6} .cols .no h3{color:#ffc79d}
+  .cols ul{margin:0;padding-left:17px;color:var(--muted);font-size:12.5px;line-height:1.7}
+
+  /* ---- cards ---- */
+  .cards{display:grid;gap:14px}
+  a.card{display:block;text-decoration:none;color:var(--ink);
     background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);
-    border-radius:16px;padding:20px;box-shadow:var(--shadow);transition:.15s}
-  a.app:hover{border-color:#3a4150;transform:translateY(-1px)}
-  .app .bar{height:5px;width:52px;border-radius:6px;margin-bottom:12px}
-  .app h2{margin:0 0 6px;font-size:18px}
-  .app p{margin:0;color:var(--muted);font-size:13.5px;line-height:1.55}
-  .app.home{border-color:var(--cobalt)}
-  .app.home .bar{background:var(--cobalt)}
-  .app.sticking .bar{background:var(--purple)}
-  .app.quiz .bar{background:var(--green)}
-  .divider{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.6px;margin:22px 0 4px}
-  .note{margin-top:28px;background:var(--panel);border:1px dashed var(--line);border-radius:12px;
-    padding:14px 16px;font-size:12.5px;color:var(--muted);line-height:1.6}
-  .note b{color:var(--ink)}
-  footer{margin-top:36px;color:var(--muted);font-size:11.5px;text-align:center;line-height:1.6}
+    border-radius:16px;padding:20px;box-shadow:var(--shadow);transition:transform .15s,border-color .15s}
+  a.card:hover{border-color:#3a4150;transform:translateY(-1px)}
+  a.card .bar{height:5px;width:52px;border-radius:6px;margin-bottom:12px}
+  a.card h3{margin:0 0 6px;font-size:18px}
+  a.card p{margin:0;color:var(--muted);font-size:13.5px;line-height:1.55}
+  a.card .tag{display:inline-block;margin-top:10px;font-size:11.5px;color:var(--muted);
+    border:1px solid var(--line);border-radius:999px;padding:3px 10px}
+  a.start{border-color:var(--cobalt)}
+  a.start .bar{background:var(--cobalt)}
+  a.quiz .bar{background:var(--green)}
+  a.sticking .bar{background:var(--purple)}
+  a.teacher .bar{background:var(--orange)}
+  .divider{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.6px;margin:24px 0 12px}
+
+  /* ---- onboarding ---- */
+  details{background:var(--panel);border:1px solid var(--line);border-radius:12px;
+    padding:0;margin-bottom:9px;overflow:hidden}
+  summary{cursor:pointer;padding:13px 16px;font-size:14px;font-weight:600;list-style:none}
+  summary::-webkit-details-marker{display:none}
+  summary::before{content:"+";color:var(--cobalt);font-weight:800;margin-right:9px}
+  details[open] summary::before{content:"–"}
+  details .body{padding:0 16px 15px;color:var(--muted);font-size:13.5px;line-height:1.7}
+  details .body b{color:var(--ink)}
+  details .body code{background:#0b0d12;border:1px solid var(--line);border-radius:5px;
+    padding:1px 6px;font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace;font-size:12px;color:var(--ink)}
+
+  footer{margin-top:42px;padding-top:20px;border-top:1px solid var(--line);
+    color:var(--muted);font-size:11.5px;text-align:center;line-height:1.75}
+
+  @media (max-width:560px){
+    .wrap{padding:32px 15px 48px}
+    h1{font-size:25px}
+    .promise{font-size:15px}
+    .cols{grid-template-columns:1fr}
+  }
 </style>
 </head>
 <body>
 <div class="wrap">
-  <h1>Praxis pilot<span class="dot">.</span></h1>
-  <p class="sub">A percussion practice pilot from the Backwerd Rhythm Shop family. No accounts, no sign-in —
-    everything stays on this device. Start at the home page; it shows each skill and tells you what to do next.</p>
-  <div class="apps">
-    <a class="app home" href="pilot/">
-      <div class="bar"></div>
-      <h2>Praxis pilot — home ★</h2>
-      <p>Your three skills, the evidence you've built in each, and the next step. Start here.</p>
-    </a>
-    <div class="divider">or open an activity directly</div>
-    <a class="app quiz" href="count-it-contract/">
-      <div class="bar"></div>
-      <h2>Count It — knowledge quiz</h2>
-      <p>Four quick questions about a sticking pattern: its name, its spelling, how it's built.</p>
-    </a>
-    <a class="app sticking" href="copy-the-sticking/">
-      <div class="bar"></div>
-      <h2>Copy the Sticking</h2>
-      <p>Your keyboard becomes a two-trigger controller. Map two keys, test them, then enter the
-        sticking from memory.</p>
-    </a>
-  </div>
-  <div class="note"><b>For teachers:</b> these are pilot prototypes. Results stay in each device's browser and are
-    shown to the student on a result receipt — nothing is uploaded. The receipt labels exactly what was and
-    wasn't measured (answer correctness vs. controller input; never physical performance).</div>
+
+  <header>
+    <h1>Praxis pilot<span class="dot">.</span></h1>
+    <p class="promise">Two different percussion apps. <b>One</b> skill profile — and an honest
+      line between what a browser measured and what still needs a teacher.</p>
+    <p class="kicker">This is the first working slice of Praxis, not the finished product. It runs entirely
+      in this browser: no account, no sign-in, nothing uploaded.</p>
+  </header>
+
+  <main>
+    <h2>What this demonstrates</h2>
+    <ol class="chain">
+      <li><span class="n">1</span><div><b>Count It</b> asks what you <span>know</span> —
+        <span>the pattern's name, its spelling, how it's built.</span></div></li>
+      <li><span class="n">2</span><div><b>Copy the Sticking</b> turns two keys (or two on-screen pads)
+        into a controller <span>and checks whether you can enter the pattern from memory.</span></div></li>
+      <li><span class="n">3</span><div><b>One combined profile</b> holds both results
+        <span>— kept as separate kinds of evidence, never averaged into a single misleading number.</span></div></li>
+      <li><span class="n">4</span><div><b>The pilot tells you what to do next</b>
+        <span>— retry, practise, or join the pass-off queue — from fixed rules, not a guess.</span></div></li>
+      <li class="teach"><span class="n">5</span><div><b>A teacher verifies the playing</b>
+        <span>— grip, rebound, tone, pulse, musical execution. The part no browser can judge.</span></div></li>
+    </ol>
+
+    <div class="boundary">
+      <b>Read this before you start.</b> This pilot is deliberately careful about what it claims.
+      A perfect score here means you answered correctly and pressed the right triggers in the right order.
+      It does <b>not</b> mean you played the rudiment well — that judgement stays with your teacher.
+      <div class="cols">
+        <div class="yes">
+          <h3>What it measures</h3>
+          <ul>
+            <li>Answer correctness</li>
+            <li>Recall of the R/L pattern</li>
+            <li>Which triggers were pressed, in what order</li>
+            <li>Missed strokes, extra strokes, first error</li>
+          </ul>
+        </div>
+        <div class="no">
+          <h3>What it cannot measure</h3>
+          <ul>
+            <li>Which physical hand you used</li>
+            <li>Grip, rebound, stroke quality</li>
+            <li>Tone, sound, dynamics</li>
+            <li>Rhythm and timing (not in v0.1)</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <h2>Start here</h2>
+    <div class="cards">
+      <a class="card start" href="pilot/">
+        <div class="bar"></div>
+        <h3>Praxis pilot — home ★</h3>
+        <p>Your three skills, the evidence you've built in each, and the next step. For the fullest
+          version of the proof, work through <b>single paradiddle</b>: it uses both apps and ends at a
+          teacher pass-off.</p>
+        <span class="tag">≈ 5 minutes</span>
+      </a>
+    </div>
+
+    <div class="divider">or open one activity directly</div>
+    <div class="cards">
+      <a class="card quiz" href="count-it-contract/">
+        <div class="bar"></div>
+        <h3>Count It — knowledge quiz</h3>
+        <p>Four quick questions about a sticking pattern: its name, its spelling, how it's built.</p>
+      </a>
+      <a class="card sticking" href="copy-the-sticking/">
+        <div class="bar"></div>
+        <h3>Copy the Sticking</h3>
+        <p>Your keyboard becomes a two-trigger controller. Map two keys, test that they register,
+          then enter the sticking from memory.</p>
+      </a>
+    </div>
+
+    <div class="divider">for teachers</div>
+    <div class="cards">
+      <a class="card teacher" href="teacher/">
+        <div class="bar"></div>
+        <h3>Teacher view — pass-off queue</h3>
+        <p>Who is ready for a pass-off, the evidence behind it with its measured / not-measured
+          boundaries, and a record of your decision. Exports to CSV and JSON.</p>
+        <span class="tag">Open demo — no login</span>
+      </a>
+    </div>
+
+    <h2>Before you try it in a classroom</h2>
+
+    <details>
+      <summary>Nothing is uploaded, and there are no accounts</summary>
+      <div class="body">Every result stays in this browser's local storage on this device. There is no
+        server, no sign-in, and no student name, email, school ID, or date of birth anywhere in the
+        system. Nothing is recorded through a microphone or camera.</div>
+    </details>
+
+    <details>
+      <summary>Sharing a device? Use a learner code</summary>
+      <div class="body">On a shared Chromebook or lab computer, each student picks a short
+        <b>learner code</b> (like <code>P03</code>) in the bar at the top of the pilot home. Results are
+        stored separately per code, so students on the same device don't see or overwrite each other's
+        evidence. The code is a pseudonym — it is not a name, and it is not tied to any identity.</div>
+    </details>
+
+    <details>
+      <summary>Clearing browser data resets the demo</summary>
+      <div class="body">Because everything lives in local storage, clearing site data — or a device that
+        wipes profiles between sessions — resets progress. The pilot will not pretend earlier mastery
+        survived. Students can copy or print a <b>result receipt</b> after any attempt if they need a
+        record that outlives the browser.</div>
+    </details>
+
+    <details>
+      <summary>What's deliberately not here yet</summary>
+      <div class="body">No accounts, no backend, no class rosters, no gradebook sync, no microphone
+        grading, and only three skills — single stroke roll, double stroke roll, and single paradiddle.
+        This slice exists to test whether the cross-app evidence loop actually helps a teacher decide
+        what a student should do next. Everything else waits on that answer.</div>
+    </details>
+  </main>
+
   <footer>
-    Part of the Backwerd Rhythm Shop app family.<br>
+    Praxis pilot v0.1 · part of the Backwerd Rhythm Shop app family.<br>
     © 2026 Backwerd Rimshot, LLC. All rights reserved.
   </footer>
 </div>
