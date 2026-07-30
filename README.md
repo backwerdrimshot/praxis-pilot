@@ -6,6 +6,8 @@ This mirror is retired (2026-07-28). The Praxis pilot and hosted platform live a
 
 Every page here now issues a path-preserving redirect, so old links —
 including deep links like `/praxis-pilot/pilot/` — land on the matching
-page at the new home.
+page at the new home. This repository contains only those redirect stubs
+and is kept solely so old links keep working; it is not developed and
+should remain archived. All feature work happens in `praxis-platform`.
 
 © 2026 Backwerd Rimshot, LLC. All rights reserved.
